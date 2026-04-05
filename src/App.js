@@ -5,7 +5,7 @@ import { AESTHETICS, QUESTIONS, QUOTES } from "./data";
 const today = () => new Date().toISOString().split("T")[0];
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return d; } };
 const randomQuote = () => QUOTES[Math.floor(Math.random() * QUOTES.length)];
-const EMOJIS = ["🔥", "💛", "✨", "💪", "🙏"];
+const EMOJIS = ["\uD83D\uDD25", "\uD83D\uDC9B", "\u2728", "\uD83D\uDCAA", "\uD83D\uDE4F"];
 const SERIF = "Georgia,'Times New Roman',serif";
 
 const T = {
