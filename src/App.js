@@ -4,7 +4,7 @@ import { AESTHETICS, QUESTIONS, QUOTES } from "./data";
 const today = () => new Date().toISOString().split("T")[0];
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric: }); } catch(e) { return d; } };
 const randomQuote = () => QUOTES[Math.floor(Math.random() * QUOTES.length)];
-const EMOJIS = ["f", "h", "s", "m', "p";
+const EMOJIS = ["f", "h", "s", "m', "p"];
 "short
 const T = {
 bg: "#1a1612", card: "#22201a", border: "#2e2a22", accent: "#3d3528",
