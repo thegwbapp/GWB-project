@@ -681,9 +681,9 @@ export default function App() {
       {/* Bottom Nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.card, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-around", padding:"10px 0 20px", zIndex:50 }}>
         {[
-          { v:"today", icon:aesObj?.icon||"?", label:"HOME" },
-          { v:"goals", icon:"?", label:"GOALS" },
-          { v:"wall", icon:"?", label:"CIRCLE" },
+          { v:"today", icon:"GWB", label:"HOME" },
+          { v:"goals", icon:"goals", label:"GOALS" },
+          { v:"wall", icon:"circle", label:"CIRCLE" },
         ].map(({ v, icon, label }) => (
           <button key={v} onClick={() => { setView(v); if(v==="wall") loadWall(); }}
             style={{ background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:"4px", opacity: view===v?1:0.35 }}>
