@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase, uploadImage } from "./api";
 import { AESTHETICS, QUESTIONS, QUOTES } from "./data";
 const today = () => new Date().toISOString().split("T")[0];
-const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric": }); } catch(e) { return d; } };
+const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric":}); } catch(e) { return d; } };
 const randomQuote = () => QUOTES[Math.floor(Math.random() * QUOTES.length)];
 const EMOJIS = ["f", "h", "s", "m", "p"];
 "short
