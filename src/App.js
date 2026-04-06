@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase, uploadImage } from "./api";
+import { dbGet, dbInsert, dbUpdate, dbDelete, uploadImage } from "./api";
 import { AESTHETICS, QUESTIONS, QUOTES } from "./data";
 
 const today = () => new Date().toISOString().split("T")[0];
