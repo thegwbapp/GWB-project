@@ -89,8 +89,8 @@ export default function App() {
       try {
         const saved = localStorage.getItem("gwb_user_id");
         if (saved) {
-          const { data, error } = await supabase.from("users").select("*").eq("id", saved).single();
-          if (!error && data) {
+          const recs = await dbGet("users", "id=eq." + saved + "&limit=1"); const data = recs && recs[0] ? recs[0] : null; const error = !data;
+          if (data) {
             setUser(data);
             if (data.quiz_done && data.aesthetic) {
               setAesthetic(data.aesthetic);
@@ -110,9 +110,9 @@ export default function App() {
 
   const loadUserData = useCallback(async (u) => {
     setDataLoading(true);
-    const [{ data: g }, { data: c }] = await Promise.all([
-      supabase.from("goals").select("*").eq("user_id", u.id),
-      supabase.from("checkins").select("*").eq("user_id", u.id),
+    const [g, c] = await Promise.all([
+      dbGet("goals", "user_id=eq." + u.id),
+      dbGet("checkins", "user_id=eq." + u.id),
     ]);
     setGoals(g || []);
     const clist = c || [];
@@ -132,9 +132,9 @@ export default function App() {
   };
 
   const loadWall = async () => {
-    const { data: p } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(30);
+    const p = await dbGet("posts", "order=created_at.desc&limit=30");
     setPosts(p || []);
-    const { data: r } = await supabase.from("reactions").select("*");
+    const r = await dbGet("reactions", "limit=500");
     const rMap = {};
     (r || []).forEach(rec => {
       if (!rMap[rec.post_id]) rMap[rec.post_id] = [];
@@ -144,7 +144,7 @@ export default function App() {
   };
 
   const loadReplies = async (postId) => {
-    const { data } = await supabase.from("replies").select("*").eq("post_id", postId).order("created_at");
+    const data = await dbGet("replies", "post_id=eq." + postId + "&order=created_at.asc");
     setReplies(prev => ({ ...prev, [postId]: data || [] }));
   };
 
@@ -159,16 +159,16 @@ export default function App() {
       if (!dname || dname.length < 2) { setAuthError("Pick a display name (2+ characters)."); setAuthLoading(false); return; }
 
       // Check email taken
-      const { data: existing } = await supabase.from("users").select("id").eq("email", email).single();
-      if (existing) { setAuthError("That email already has an account. Sign in instead."); setAuthLoading(false); return; }
+      const existingArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&limit=1"); const existing = existingArr && existingArr[0] ? existingArr[0] : null;
+      if (existing && existing.id) { setAuthError("That email already has an account. Sign in instead."); setAuthLoading(false); return; }
 
       // Check display name taken
-      const { data: nameCheck } = await supabase.from("users").select("id").eq("display_name", dname).single();
-      if (nameCheck) { setAuthError("That display name is taken. Try another."); setAuthLoading(false); return; }
+      const nameCheckArr = await dbGet("users", "display_name=eq." + encodeURIComponent(dname) + "&limit=1"); const nameCheck = nameCheckArr && nameCheckArr[0] ? nameCheckArr[0] : null;
+      if (nameCheck && nameCheck.id) { setAuthError("That display name is taken. Try another."); setAuthLoading(false); return; }
 
       // Create user
-      const { data: newUser, error } = await supabase.from("users").insert({ email, display_name: dname }).select().single();
-      if (error || !newUser) { setAuthError("Could not create account: " + (error?.message || "unknown error")); setAuthLoading(false); return; }
+      const newUser = await dbInsert("users", { email: email, display_name: dname });
+      if (!newUser || newUser.code) { setAuthError("Could not create account. Try again."); setAuthLoading(false); return; }
 
       try { localStorage.setItem("gwb_user_id", newUser.id); } catch {}
       setUser(newUser);
@@ -177,8 +177,8 @@ export default function App() {
     } else {
       // Sign in
       if (!dname || dname.length < 2) { setAuthError("Enter your display name to sign in."); setAuthLoading(false); return; }
-      const { data: found, error } = await supabase.from("users").select("*").eq("email", email).eq("display_name", dname).single();
-      if (error || !found) { setAuthError("No account found with that email and display name."); setAuthLoading(false); return; }
+      const foundArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&display_name=eq." + encodeURIComponent(dname) + "&limit=1"); const found = foundArr && foundArr[0] ? foundArr[0] : null;
+      if (!found || !found.id) { setAuthError("No account found. Check your email and display name."); setAuthLoading(false); return; }
 
       try { localStorage.setItem("gwb_user_id", found.id); } catch {}
       setUser(found);
@@ -207,7 +207,7 @@ export default function App() {
       } else {
         const winner = Object.entries(ns).sort((a, b) => b[1] - a[1])[0][0];
         setAesthetic(winner);
-        if (user) await supabase.from("users").update({ aesthetic: winner, quiz_done: true }).eq("id", user.id);
+        if (user) await dbUpdate("users", user.id, { aesthetic: winner, quiz_done: true });
         setUser(prev => ({ ...prev, aesthetic: winner, quiz_done: true }));
         setScreen("result");
       }
@@ -217,9 +217,9 @@ export default function App() {
   // -- ENTER APP --
   const enterApp = async () => {
     const suggested = AESTHETICS[aesthetic]?.goals || [];
-    const inserts = suggested.map(text => ({ user_id: user.id, goal_text: text }));
-    const { data: saved } = await supabase.from("goals").insert(inserts).select();
-    setGoals(saved || []);
+    
+    const saved = []; for (let i = 0; i < suggested.length; i++) { const rec = await dbInsert("goals", { user_id: user.id, goal_text: suggested[i] }); if (rec && !rec.code) saved.push(rec); }
+    setGoals(saved);
     setScreen("app");
     setView("today");
     loadWall();
@@ -229,13 +229,13 @@ export default function App() {
   const addGoal = async () => {
     if (!newGoal.trim()) return;
     const text = newGoal.trim(); setNewGoal("");
-    const { data } = await supabase.from("goals").insert({ user_id: user.id, goal_text: text }).select().single();
-    if (data) setGoals(prev => [...prev, data]);
+    const data = await dbInsert("goals", { user_id: user.id, goal_text: text });
+    if (data && !data.code) setGoals(prev => [...prev, data]);
   };
 
   const removeGoal = async (id) => {
     setGoals(prev => prev.filter(g => g.id !== id));
-    await supabase.from("goals").delete().eq("id", id);
+    await dbDelete("goals", id);
   };
 
   // -- CHECK-INS --
@@ -250,14 +250,11 @@ export default function App() {
       const rec = todayCheckins.find(c => c.goal_id === goal.id);
       if (rec) {
         setCheckins(prev => prev.filter(c => c.id !== rec.id));
-        await supabase.from("checkins").delete().eq("id", rec.id);
+        await dbDelete("checkins", rec.id);
       }
     } else {
-      const { data } = await supabase.from("checkins").insert({
-        user_id: user.id, goal_id: goal.id, goal_text: goal.goal_text,
-        date: today(), streak: streak + 1, aesthetic,
-      }).select().single();
-      if (data) setCheckins(prev => [...prev, data]);
+      const data = await dbInsert("checkins", { user_id: user.id, goal_id: goal.id, goal_text: goal.goal_text, date: today(), streak: streak + 1, aesthetic: aesthetic });
+      if (data && !data.code) setCheckins(prev => [...prev, data]);
       if (completedCount + 1 === goals.length && goals.length > 0) {
         setCelebrating(true); setTimeout(() => setCelebrating(false), 4000);
       }
@@ -280,11 +277,8 @@ export default function App() {
     let image_url = null;
     if (postImage) image_url = await uploadImage(postImage);
     setUploadingImage(false);
-    const { data } = await supabase.from("posts").insert({
-      user_id: user.id, display_name: user.display_name,
-      content, image_url, aesthetic, streak, date: today(),
-    }).select().single();
-    if (data) setPosts(prev => [data, ...prev]);
+    const data = await dbInsert("posts", { user_id: user.id, display_name: user.display_name, content: content, image_url: image_url, aesthetic: aesthetic, streak: streak, date: today() });
+    if (data && !data.code) setPosts(prev => [data, ...prev]);
   };
 
   const toggleReaction = async (postId, emoji) => {
@@ -292,21 +286,18 @@ export default function App() {
     const existing = postReactions.find(r => r.user_id === user.id && r.emoji === emoji);
     if (existing) {
       setReactions(prev => ({ ...prev, [postId]: postReactions.filter(r => r.id !== existing.id) }));
-      await supabase.from("reactions").delete().eq("id", existing.id);
+      await dbDelete("reactions", existing.id);
     } else {
-      const { data } = await supabase.from("reactions").insert({ post_id: postId, user_id: user.id, emoji }).select().single();
-      if (data) setReactions(prev => ({ ...prev, [postId]: [...postReactions, data] }));
+      const data = await dbInsert("reactions", { post_id: postId, user_id: user.id, emoji: emoji });
+      if (data && !data.code) setReactions(prev => ({ ...prev, [postId]: [...postReactions, data] }));
     }
   };
 
   const submitReply = async (postId) => {
     if (!replyText.trim()) return;
     const content = replyText.trim(); setReplyText("");
-    const { data } = await supabase.from("replies").insert({
-      post_id: postId, user_id: user.id,
-      display_name: user.display_name, content, aesthetic,
-    }).select().single();
-    if (data) setReplies(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data] }));
+    const data = await dbInsert("replies", { post_id: postId, user_id: user.id, display_name: user.display_name, content: content, aesthetic: aesthetic });
+    if (data && !data.code) setReplies(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data] }));
   };
 
   // -- AI NUDGE --
