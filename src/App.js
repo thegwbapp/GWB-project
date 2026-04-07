@@ -784,15 +784,20 @@ export default function App() {
             const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
             const now = new Date();
             const weekDays = [];
-            for (let i = 6; i >= 0; i--) {
-              const d = new Date(now);
-              d.setDate(now.getDate() - i);
+            const dayOfWeek = now.getDay();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - dayOfWeek);
+            const todayKey = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
+            for (let i = 0; i <= 6; i++) {
+              const d = new Date(startOfWeek);
+              d.setDate(startOfWeek.getDate() + i);
               const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
               const dayCheckins = checkins.filter(function(c){ return c.date === key; });
               const done = dayCheckins.length;
               const total = goals.length;
               const pct = total ? Math.round(done / total * 100) : 0;
-              const todayKey = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0"); weekDays.push({ label: dayNames[d.getDay()], key, done, total, pct, isToday: key === todayKey });
+              const isFuture = d > now;
+              weekDays.push({ label: dayNames[i], key, done, total, pct, isToday: key === todayKey, isFuture });
             }
             const totalPossible = goals.length * 7;
             const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
@@ -805,7 +810,7 @@ export default function App() {
                     return (
                       <div key={day.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", flex:1 }}>
                         <div style={{ width:"100%", height:"60px", background:T.bg, border:"1px solid "+T.border, borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
-                          <div style={{ width:"100%", height:day.pct+"%", background: day.isToday ? g : (day.pct===100 ? g : T.accent), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
+                          <div style={{ width:"100%", height:day.pct+"%", background: day.isFuture ? "transparent" : (day.isToday ? g : (day.pct===100 ? g : T.accent)), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
                         </div>
                         <p style={{ fontSize:"9px", letterSpacing:"1px", color: day.isToday ? g : T.muted, fontFamily:"Georgia,serif" }}>{day.label}</p>
                         <p style={{ fontSize:"9px", color: day.pct===100 ? g : T.dim, fontFamily:"Georgia,serif" }}>{day.done}/{day.total}</p>
