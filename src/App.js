@@ -82,6 +82,11 @@ export default function App() {
   const [cycleStartDate, setCycleStartDate] = useState(null);
   const [cycleInput, setCycleInput] = useState("");
   const [cycleSaved, setCycleSaved] = useState(false);
+  const [visionPosts, setVisionPosts] = useState([]);
+  const [visionImage, setVisionImage] = useState(null);
+  const [visionImagePreview, setVisionImagePreview] = useState(null);
+  const [visionCaption, setVisionCaption] = useState("");
+  const [uploadingVision, setUploadingVision] = useState(false);
 
   const aesObj = aesthetic ? AESTHETICS[aesthetic] : null;
   const gold = aesObj?.color || T.gold;
@@ -124,6 +129,7 @@ export default function App() {
     if (u.cycle_start) { setCycleStartDate(u.cycle_start); setCycleSaved(true); }
     setDataLoading(false);
     loadWall();
+    loadVisionBoard();
   }, []);
 
   const calcStreak = (data) => {
@@ -161,6 +167,45 @@ export default function App() {
         console.log("cycle save result:", d);
       } catch(e) { console.error("cycle save error:", e); }
     }
+  };
+
+  const loadVisionBoard = async () => {
+    if (!user) return;
+    const data = await dbGet("vision_board", "user_id=eq." + user.id + "&order=created_at.desc");
+    setVisionPosts(data || []);
+  };
+
+  const handleVisionImageSelect = (e) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (!file) return;
+    setVisionImage(file);
+    setVisionImagePreview(URL.createObjectURL(file));
+  };
+
+  const submitVisionPost = async () => {
+    if (!visionImage) return;
+    setUploadingVision(true);
+    const fd = new FormData();
+    fd.append("file", visionImage);
+    fd.append("upload_preset", "tsuduljg");
+    try {
+      const r = await fetch("https://api.cloudinary.com/v1_1/dwhjqqkjg/image/upload", {method:"POST", body:fd});
+      const d = await r.json();
+      const image_url = d.secure_url || null;
+      if (image_url) {
+        const rec = await dbInsert("vision_board", { user_id: user.id, image_url: image_url, caption: visionCaption.trim() });
+        if (rec && !rec.code) setVisionPosts(prev => [rec, ...prev]);
+      }
+    } catch(e) { console.error("vision upload error", e); }
+    setUploadingVision(false);
+    setVisionImage(null);
+    setVisionImagePreview(null);
+    setVisionCaption("");
+  };
+
+  const deleteVisionPost = async (id) => {
+    setVisionPosts(prev => prev.filter(p => p.id !== id));
+    await dbDelete("vision_board", id);
   };
 
   const loadWall = async () => {
@@ -852,6 +897,62 @@ export default function App() {
         </div>
       )}
 
+      {!dataLoading && view==="vision" && (
+        <div>
+          <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>YOUR VISION BOARD</p>
+          <p style={{ fontSize:"13px", color:T.dim, fontStyle:"italic", marginBottom:"16px", lineHeight:1.5 }}>Your private space. Add images of what you are building toward.</p>
+
+          {/* Upload section */}
+          <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"16px", marginBottom:"16px" }}>
+            {visionImagePreview ? (
+              <div style={{ position:"relative", marginBottom:"12px" }}>
+                <img src={visionImagePreview} style={{ width:"100%", borderRadius:"10px", maxHeight:"240px", objectFit:"cover" }}/>
+                <button onClick={function(){setVisionImage(null);setVisionImagePreview(null);}}
+                  style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(26,22,18,0.8)", border:"none", color:T.text, width:"28px", height:"28px", borderRadius:"50%", fontSize:"16px", fontFamily:"Georgia,serif" }}>x</button>
+              </div>
+            ) : (
+              <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px", background:T.bg, border:"2px dashed "+T.border, borderRadius:"10px", cursor:"pointer", marginBottom:"12px" }}>
+                <p style={{ fontSize:"24px", color:T.dim, marginBottom:"8px" }}>{"◉"}</p>
+                <p style={{ fontSize:"12px", letterSpacing:"2px", color:T.muted, fontFamily:"Georgia,serif" }}>TAP TO ADD IMAGE</p>
+                <input type="file" accept="image/*" onChange={handleVisionImageSelect} style={{ display:"none" }}/>
+              </label>
+            )}
+            <input value={visionCaption} onChange={function(e){setVisionCaption(e.target.value);}}
+              placeholder="Add a caption... (optional)"
+              style={{ width:"100%", padding:"11px 14px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"14px", borderRadius:"8px", outline:"none", fontStyle:"italic", fontFamily:"Georgia,serif", marginBottom:"10px" }}/>
+            <button onClick={submitVisionPost} disabled={!visionImage || uploadingVision}
+              style={{ width:"100%", padding:"13px", background: visionImage ? (aesObj ? aesObj.color : T.gold) : T.accent, border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif", opacity: !visionImage ? 0.5 : 1 }}>
+              {uploadingVision ? "ADDING TO YOUR BOARD..." : "ADD TO VISION BOARD"}
+            </button>
+          </div>
+
+          {/* Vision grid */}
+          {visionPosts.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0", color:T.dim }}>
+              <p style={{ fontSize:"32px", marginBottom:"12px", color:aesObj ? aesObj.color : T.gold, opacity:0.4 }}>{"◉"}</p>
+              <p style={{ fontSize:"15px", fontStyle:"italic", lineHeight:1.8, color:T.muted }}>Your vision board is empty.<br/>Start adding images of what you are building.</p>
+            </div>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+              {visionPosts.map(function(post) {
+                return (
+                  <div key={post.id} style={{ position:"relative", borderRadius:"10px", overflow:"hidden" }}>
+                    <img src={post.image_url} style={{ width:"100%", height:"160px", objectFit:"cover", display:"block" }}/>
+                    {post.caption && (
+                      <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(26,22,18,0.9))", padding:"20px 10px 8px" }}>
+                        <p style={{ fontSize:"12px", color:T.text, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{post.caption}</p>
+                      </div>
+                    )}
+                    <button onClick={function(){deleteVisionPost(post.id);}}
+                      style={{ position:"absolute", top:"6px", right:"6px", background:"rgba(26,22,18,0.7)", border:"none", color:T.text, width:"24px", height:"24px", borderRadius:"50%", fontSize:"12px", fontFamily:"Georgia,serif", cursor:"pointer" }}>x</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Bottom Nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.card, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-around", padding:"10px 0 20px", zIndex:50 }}>
         {[
@@ -859,8 +960,9 @@ export default function App() {
           { v:"goals", icon:"✶", label:"GOALS" },
           { v:"wall", icon:"◎", label:"CIRCLE" },
           { v:"cycle", icon:"☽", label:"CYCLE" },
+          { v:"vision", icon:"◉", label:"VISION" },
         ].map(({ v, icon, label }) => (
-          <button key={v} onClick={() => { setView(v); if(v==="wall") loadWall(); }}
+          <button key={v} onClick={() => { setView(v); if(v==="wall") loadWall(); if(v==="vision") loadVisionBoard(); }}
             style={{ background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:"4px", opacity: view===v?1:0.35 }}>
             <span style={{ fontSize:"20px", color: view===v?gold:T.muted }}>{icon}</span>
             <span style={{ fontSize:"9px", letterSpacing:"2px", color: view===v?gold:T.muted }}>{label}</span>
