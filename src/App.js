@@ -150,9 +150,9 @@ export default function App() {
     if (!cycleInput) return;
     setCycleStartDate(cycleInput);
     setCycleSaved(true);
-    if (currentUser) {
+    if (user) {
       try {
-        const res = await fetch("https://jppebmgmciiemxfhbdxf.supabase.co/rest/v1/users?id=eq." + currentUser.id, {
+        const res = await fetch("https://jppebmgmciiemxfhbdxf.supabase.co/rest/v1/users?id=eq." + user.id, {
           method: "PATCH",
           headers: {"apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGVibWdtY2lpZW14ZmhiZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTE5MDksImV4cCI6MjA5MDk4NzkwOX0.AC3NUHkZtd2SDT7YOliQd-m1tuGa8_xOORvyMKo36jc", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGVibWdtY2lpZW14ZmhiZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTE5MDksImV4cCI6MjA5MDk4NzkwOX0.AC3NUHkZtd2SDT7YOliQd-m1tuGa8_xOORvyMKo36jc", "Content-Type": "application/json"},
           body: JSON.stringify({ cycle_start: cycleInput })
