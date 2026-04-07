@@ -632,12 +632,12 @@ export default function App() {
               )}
               <div style={{ display:"flex", gap:"8px" }}>
                 <label style={{ display:"flex", alignItems:"center", gap:"6px", padding:"10px 14px", background:T.bg, border:`1px solid ${T.border}`, borderRadius:"8px", cursor:"pointer", fontSize:"12px", color:T.muted }}>
-                  ? PHOTO
+                  PHOTO
                   <input type="file" accept="image/*" onChange={handleImageSelect} style={{ display:"none" }} />
                 </label>
                 <button onClick={submitPost} disabled={uploadingImage||(!postContent.trim()&&!postImage)}
                   style={{ flex:1, padding:"10px", background:gold, border:"none", color:T.bg, fontSize:"11px", letterSpacing:"3px", fontWeight:"600", borderRadius:"8px", opacity:(!postContent.trim()&&!postImage)?0.5:1 }}>
-                  {uploadingImage?"UPLOADING...":"POST ?"}
+                  {uploadingImage?"UPLOADING...":"POST"}
                 </button>
               </div>
             </div>
