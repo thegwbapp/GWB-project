@@ -722,6 +722,55 @@ export default function App() {
         )}
       </div>
 
+      {!dataLoading && view==="today" && userGoals.length > 0 && (
+        <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"18px", marginBottom:"12px" }}>
+          <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"16px" }}>THIS WEEK</p>
+          {(() => {
+            const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+            const now = new Date();
+            const weekDays = [];
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date(now);
+              d.setDate(now.getDate() - i);
+              const key = d.toISOString().split("T")[0];
+              const dayCheckins = userCheckins.filter(function(c){ return c.date === key; });
+              const done = dayCheckins.length;
+              const total = userGoals.length;
+              const pct = total ? Math.round(done / total * 100) : 0;
+              weekDays.push({ label: dayNames[d.getDay()], key, done, total, pct, isToday: i === 0 });
+            }
+            const totalPossible = userGoals.length * 7;
+            const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
+            const weekScore = totalPossible ? Math.round(totalDone / totalPossible * 100) : 0;
+            const g = aesObj ? aesObj.color : "#c9a84c";
+            return (
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:"14px", gap:"4px" }}>
+                  {weekDays.map(function(day) {
+                    return (
+                      <div key={day.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", flex:1 }}>
+                        <div style={{ width:"100%", height:"60px", background:"#1a1612", borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
+                          <div style={{ width:"100%", height:day.pct+"%", background: day.isToday ? g : (day.pct===100 ? g : "#3d3528"), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
+                        </div>
+                        <p style={{ fontSize:"9px", letterSpacing:"1px", color: day.isToday ? g : T.muted, fontFamily:"Georgia,serif" }}>{day.label}</p>
+                        <p style={{ fontSize:"9px", color: day.pct===100 ? g : T.dim, fontFamily:"Georgia,serif" }}>{day.done}/{day.total}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ borderTop:"1px solid "+T.border, paddingTop:"14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <p style={{ fontSize:"10px", letterSpacing:"3px", color:T.muted, marginBottom:"2px" }}>WEEKLY SCORE</p>
+                    <p style={{ fontSize:"11px", color:T.dim, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{totalDone} of {totalPossible} possible</p>
+                  </div>
+                  <p style={{ fontSize:"36px", fontWeight:"300", color: weekScore >= 70 ? g : weekScore >= 40 ? "#9ab0c4" : T.muted, letterSpacing:"-1px" }}>{weekScore}%</p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {!dataLoading && view==="cycle" && (
         <div>
           {!cycleSaved ? (
