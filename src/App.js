@@ -804,8 +804,8 @@ export default function App() {
                   {weekDays.map(function(day) {
                     return (
                       <div key={day.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", flex:1 }}>
-                        <div style={{ width:"100%", height:"60px", background:"#1a1612", borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
-                          <div style={{ width:"100%", height:day.pct+"%", background: day.isToday ? g : (day.pct===100 ? g : "#3d3528"), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
+                        <div style={{ width:"100%", height:"60px", background:T.bg, border:"1px solid "+T.border, borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
+                          <div style={{ width:"100%", height:day.pct+"%", background: day.isToday ? g : (day.pct===100 ? g : T.accent), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
                         </div>
                         <p style={{ fontSize:"9px", letterSpacing:"1px", color: day.isToday ? g : T.muted, fontFamily:"Georgia,serif" }}>{day.label}</p>
                         <p style={{ fontSize:"9px", color: day.pct===100 ? g : T.dim, fontFamily:"Georgia,serif" }}>{day.done}/{day.total}</p>
