@@ -284,6 +284,28 @@ export default function App() {
   };
 
   // -- WALL --
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState("");
+
+  const deletePost = async (postId) => {
+    if (!window.confirm("Delete this post?")) return;
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    await dbDelete("posts", postId);
+  };
+
+  const startEditPost = (post) => {
+    setEditingPost(post.id);
+    setEditContent(post.content || "");
+  };
+
+  const saveEditPost = async (postId) => {
+    const updated = editContent.trim();
+    if (!updated) return;
+    setPosts(prev => prev.map(p => p.id === postId ? {...p, content: updated} : p));
+    setEditingPost(null);
+    await dbUpdate("posts", postId, { content: updated });
+  };
+
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -666,7 +688,7 @@ export default function App() {
                         <div style={{ borderTop:`1px solid ${T.border}` }}>
                           <button onClick={() => { if(!isExpanded){setExpandedPost(post.id);loadReplies(post.id);}else setExpandedPost(null); }}
                             style={{ width:"100%", padding:"10px 16px", background:"none", border:"none", color:T.dim, fontSize:"12px", letterSpacing:"2px", textAlign:"left" }}>
-                            {isExpanded?"? HIDE REPLIES":`? REPLIES${postReplies.length>0?` (${postReplies.length})`:""}`}
+                            {isExpanded ? "- HIDE REPLIES" : "REPLIES" + (postReplies.length > 0 ? " (" + postReplies.length + ")" : "")}
                           </button>
                           {isExpanded && (
                             <div style={{ padding:"0 16px 14px" }}>
