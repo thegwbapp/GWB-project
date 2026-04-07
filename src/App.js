@@ -129,7 +129,7 @@ export default function App() {
   const calcStreak = (data) => {
     let count = 0; const d = new Date();
     for (let i = 0; i < 365; i++) {
-      const key = d.toISOString().split("T")[0];
+      const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
       if (data.some(r => r.date === key)) { count++; d.setDate(d.getDate() - 1); } else break;
     }
     setStreak(count);
@@ -742,12 +742,12 @@ export default function App() {
             for (let i = 6; i >= 0; i--) {
               const d = new Date(now);
               d.setDate(now.getDate() - i);
-              const key = d.toISOString().split("T")[0];
+              const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
               const dayCheckins = checkins.filter(function(c){ return c.date === key; });
               const done = dayCheckins.length;
               const total = goals.length;
               const pct = total ? Math.round(done / total * 100) : 0;
-              weekDays.push({ label: dayNames[d.getDay()], key, done, total, pct, isToday: i === 0 });
+              const todayKey = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0"); weekDays.push({ label: dayNames[d.getDay()], key, done, total, pct, isToday: key === todayKey });
             }
             const totalPossible = goals.length * 7;
             const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
