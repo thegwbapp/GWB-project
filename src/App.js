@@ -79,6 +79,9 @@ export default function App() {
   const [replyText, setReplyText] = useState("");
   const [replies, setReplies] = useState({});
   const [reactions, setReactions] = useState({});
+  const [cycleStartDate, setCycleStartDate] = useState(null);
+  const [cycleInput, setCycleInput] = useState("");
+  const [cycleSaved, setCycleSaved] = useState(false);
 
   const aesObj = aesthetic ? AESTHETICS[aesthetic] : null;
   const gold = aesObj?.color || T.gold;
@@ -118,6 +121,7 @@ export default function App() {
     const clist = c || [];
     setCheckins(clist);
     calcStreak(clist);
+    if (u.cycle_start) { setCycleStartDate(u.cycle_start); setCycleSaved(true); }
     setDataLoading(false);
     loadWall();
   }, []);
@@ -129,6 +133,24 @@ export default function App() {
       if (data.some(r => r.date === key)) { count++; d.setDate(d.getDate() - 1); } else break;
     }
     setStreak(count);
+  };
+
+  const getCyclePhase = (startDate) => {
+    const start = new Date(startDate);
+    const now = new Date();
+    const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+    const day = (diff % 28) + 1;
+    if (day <= 5) return { phase:"Menstrual", days:"Days 1-5", day:day, icon:"New Moon", color:"#8a6a8a", body:"Your body is shedding and renewing. Estrogen and progesterone are at their lowest. You may feel introspective, tired, and sensitive. This is intentional rest, not weakness.", energy:"Low to Moderate", workout:"Gentle yoga, walking, stretching. Honor the rest.", foods:"Iron-rich foods: leafy greens, lentils, dark chocolate. Warm nourishing meals.", affirmation:"Rest is productive. My body is doing sacred work." };
+    if (day <= 13) return { phase:"Follicular", days:"Days 6-13", day:day, icon:"Waxing Moon", color:"#8a9e88", body:"Estrogen is rising. Your brain is sharp, your mood is lifting, and your energy is building. This is your fresh start energy. New ideas, new commitments, new momentum.", energy:"Rising", workout:"Strength training, cardio, trying something new. You have the energy for it.", foods:"Fermented foods, lean proteins, fresh vegetables. Your metabolism is ready.", affirmation:"I am rising. My potential is expanding with every day." };
+    if (day <= 16) return { phase:"Ovulatory", days:"Days 14-16", day:day, icon:"Full Moon", color:"#c9a84c", body:"Peak estrogen and testosterone. You are magnetic right now. Communication is easiest, confidence is highest, and your body is at its strongest. Use this window.", energy:"Peak", workout:"High intensity, group classes, personal records. Your body can handle it all.", foods:"Light, energizing foods. Raw vegetables, smoothies, fiber-rich meals.", affirmation:"I am at my most powerful. I move through the world with ease and confidence." };
+    return { phase:"Luteal", days:"Days 17-28", day:day, icon:"Waning Moon", color:"#9ab0c4", body:"Progesterone rises then drops. You may crave comfort, feel more emotional, or want to slow down. This is not a flaw. This is your body asking for intentional care before the reset.", energy:"Declining", workout:"Moderate cardio, pilates, walks. Reduce intensity as you near day 28.", foods:"Magnesium-rich foods: dark chocolate, nuts, seeds. Complex carbs for mood stability.", affirmation:"I honor my need to slow down. Softness is my strength right now." };
+  };
+
+  const saveCycleDate = async () => {
+    if (!cycleInput) return;
+    setCycleStartDate(cycleInput);
+    setCycleSaved(true);
+    if (currentUser) await dbUpdate("users", currentUser.id, { cycle_start: cycleInput });
   };
 
   const loadWall = async () => {
@@ -678,12 +700,71 @@ export default function App() {
         )}
       </div>
 
+      {!dataLoading && view==="cycle" && (
+        <div>
+          {!cycleSaved ? (
+            <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px" }}>
+              <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"8px" }}>YOUR CYCLE</p>
+              <p style={{ fontSize:"15px", color:T.muted, fontStyle:"italic", lineHeight:1.6, marginBottom:"20px" }}>Enter the first day of your last period and we will tell you exactly what your body needs right now.</p>
+              <input type="date" value={cycleInput} onChange={function(e){setCycleInput(e.target.value);}}
+                style={{ width:"100%", padding:"13px 16px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"16px", borderRadius:"8px", outline:"none", marginBottom:"12px", fontFamily:"Georgia,serif" }}/>
+              <button onClick={saveCycleDate}
+                style={{ width:"100%", padding:"14px", background:"#c9a84c", border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif" }}>
+                REVEAL MY PHASE
+              </button>
+            </div>
+          ) : (
+            <div>
+              {(() => {
+                const phase = getCyclePhase(cycleStartDate);
+                return (
+                  <div>
+                    <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px", textAlign:"center" }}>
+                      <p style={{ fontSize:"13px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>{phase.icon}</p>
+                      <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>{phase.days} - Day {phase.day}</p>
+                      <h2 style={{ fontSize:"28px", fontWeight:"400", color:phase.color, marginBottom:"6px", letterSpacing:"1px" }}>{phase.phase} Phase</h2>
+                      <div style={{ width:"36px", height:"1px", background:phase.color, margin:"12px auto" }}></div>
+                      <p style={{ fontSize:"15px", lineHeight:1.8, color:T.muted, fontStyle:"italic" }}>{phase.body}</p>
+                    </div>
+                    <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"20px", marginBottom:"14px" }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:"16px" }}>
+                        <div>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>ENERGY</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.energy}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>MOVEMENT</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.workout}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>NOURISHMENT</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.foods}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"8px" }}>GWB SAYS</p>
+                          <p style={{ fontSize:"16px", color:T.text, fontStyle:"italic", lineHeight:1.7 }}>"{phase.affirmation}"</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={function(){setCycleSaved(false);setCycleInput("");}}
+                      style={{ width:"100%", padding:"12px", background:"transparent", border:"1px solid "+T.border, color:T.muted, fontSize:"11px", letterSpacing:"3px", borderRadius:"10px", fontFamily:"Georgia,serif" }}>
+                      UPDATE CYCLE DATE
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Bottom Nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.card, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-around", padding:"10px 0 20px", zIndex:50 }}>
         {[
           { v:"today", icon:"◈", label:"HOME" },
           { v:"goals", icon:"✶", label:"GOALS" },
           { v:"wall", icon:"◎", label:"CIRCLE" },
+          { v:"cycle", icon:"☽", label:"CYCLE" },
         ].map(({ v, icon, label }) => (
           <button key={v} onClick={() => { setView(v); if(v==="wall") loadWall(); }}
             style={{ background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:"4px", opacity: view===v?1:0.35 }}>
