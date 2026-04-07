@@ -732,7 +732,7 @@ export default function App() {
         )}
       </div>
 
-      {!dataLoading && view==="today" && userGoals.length > 0 && (
+      {!dataLoading && view==="today" && goals.length > 0 && (
         <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"18px", marginBottom:"12px" }}>
           <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"16px" }}>THIS WEEK</p>
           {(() => {
@@ -743,13 +743,13 @@ export default function App() {
               const d = new Date(now);
               d.setDate(now.getDate() - i);
               const key = d.toISOString().split("T")[0];
-              const dayCheckins = userCheckins.filter(function(c){ return c.date === key; });
+              const dayCheckins = checkins.filter(function(c){ return c.date === key; });
               const done = dayCheckins.length;
-              const total = userGoals.length;
+              const total = goals.length;
               const pct = total ? Math.round(done / total * 100) : 0;
               weekDays.push({ label: dayNames[d.getDay()], key, done, total, pct, isToday: i === 0 });
             }
-            const totalPossible = userGoals.length * 7;
+            const totalPossible = goals.length * 7;
             const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
             const weekScore = totalPossible ? Math.round(totalDone / totalPossible * 100) : 0;
             const g = aesObj ? aesObj.color : "#c9a84c";
