@@ -559,7 +559,7 @@ export default function App() {
                     <div key={goal.id} style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", borderTop: i>0?`1px solid ${T.border}`:"none" }}>
                       <span style={{ color:gold, fontSize:"13px", flexShrink:0 }}>{aesObj?.icon||"?"}</span>
                       <span style={{ flex:1, fontSize:"15px", color:T.text, lineHeight:1.4, fontStyle:"italic" }}>{goal.goal_text}</span>
-                      <button onClick={() => removeGoal(goal.id)} style={{ background:"none", border:"none", color:T.dim, fontSize:"18px", padding:"0 4px" }}>?</button>
+                      <button onClick={() => removeGoal(goal.id)} style={{ background:"none", border:"none", color:T.dim, fontSize:"18px", padding:"0 4px" }}>x</button>
                     </div>
                   ))}
                 </div>
