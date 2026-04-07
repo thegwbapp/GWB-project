@@ -9,8 +9,8 @@ const EMOJIS = ["\uD83D\uDD25", "\uD83D\uDC9B", "\u2728", "\uD83D\uDCAA", "\uD83
 const SERIF = "Georgia,'Times New Roman',serif";
 
 const T = {
-  bg: "#1a1612", card: "#22201a", border: "#2e2a22", accent: "#3d3528",
-  text: "#f0e8d8", muted: "#8a7d68", dim: "#4a4030", gold: "#c9a84c",
+  bg: "#f5f0e8", card: "#ede8df", border: "#d4c8b5", accent: "#c4b8a5",
+  text: "#2a2218", muted: "#7a6a55", dim: "#a89880", gold: "#b8862a",
 };
 
 const CSS = `
@@ -25,7 +25,7 @@ const CSS = `
   .fu6{animation:fadeUp .5s .4s ease both}
   .fi{animation:fadeIn .35s ease both}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#1a1612}
+  body{background:#f5f0e8}
   button{cursor:pointer;font-family:${SERIF};transition:all .2s}
   button:active{opacity:.8;transform:scale(.98)}
   input,textarea{font-family:${SERIF}}
