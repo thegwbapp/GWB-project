@@ -746,6 +746,19 @@ export default function App() {
                       <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>{phase.days} - Day {phase.day}</p>
                       <h2 style={{ fontSize:"28px", fontWeight:"400", color:phase.color, marginBottom:"6px", letterSpacing:"1px" }}>{phase.phase} Phase</h2>
                       <div style={{ width:"36px", height:"1px", background:phase.color, margin:"12px auto" }}></div>
+                      {(() => {
+                        const start = new Date(cycleStartDate);
+                        const now = new Date();
+                        const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+                        const dayInCycle = (diff % 28) + 1;
+                        const daysUntilNext = 28 - dayInCycle + 1;
+                        return (
+                          <div style={{ background:"rgba(201,168,76,0.06)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:"10px", padding:"14px 18px", marginBottom:"16px" }}>
+                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:"#c9a84c", marginBottom:"4px" }}>NEXT PERIOD IN</p>
+                            <p style={{ fontSize:"32px", fontWeight:"300", color:"#c9a84c", letterSpacing:"2px", lineHeight:1 }}>{daysUntilNext} {daysUntilNext === 1 ? "day" : "days"}</p>
+                          </div>
+                        );
+                      })()}
                       <p style={{ fontSize:"15px", lineHeight:1.8, color:T.muted, fontStyle:"italic" }}>{phase.body}</p>
                     </div>
                     <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"20px", marginBottom:"14px" }}>
