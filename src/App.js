@@ -399,36 +399,13 @@ export default function App() {
     if (data && !data.code) setReplies(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data] }));
   };
 
-// -- AI NUDGE --
-  const NUDGE_ANGLES = [
-    "Give her a bold direct challenge — push her to act right now.",
-    "Give her something soft and affirming — remind her of her worth.",
-    "Give her a perspective shift — reframe how she sees today.",
-    "Give her a reality check — speak to what she might be avoiding.",
-    "Give her something poetic and inspiring — speak to her soul.",
-    "Give her a practical spark — one specific thing she can do right now.",
-    "Celebrate where she is right now — even if it is not perfect.",
-  ];
+  // -- AI NUDGE --
   const getAINudge = async () => {
     setLoadingAI(true); setAiMsg("");
     const done = goals.filter(g => checkedIds.has(g.id)).map(g => g.goal_text);
     const pending = goals.filter(g => !checkedIds.has(g.id)).map(g => g.goal_text);
-    const angle = NUDGE_ANGLES[Math.floor(Math.random() * NUDGE_ANGLES.length)];
-    const seed = Math.random().toString(36).substring(7);
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          system: `You are the voice of The GWB Project — Grow With Boldness. Speak like The Grown Woman Blueprint: refined, warm, direct. No fluff. No emojis. 2-3 sentences. The user's aesthetic is ${aesObj?.name}. Address them by display name. Make each nudge feel completely different. Seed: ${seed}.`,
-          messages: [{ role: "user", content: `Name: ${user?.display_name}\nAesthetic: ${aesObj?.name}\nStreak: ${streak} days\nCompleted: ${done.join(", ") || "none yet"}\nPending: ${pending.join(", ") || "all done!"}\nAngle: ${angle}\nGive a nudge from this specific angle.` }],
-        }),
-      });
-      const data = await res.json();
-      setAiMsg(data.content?.map(b => b.text || "").join("") || "The woman you're becoming is watching. Keep going.");
-    } catch { setAiMsg("The woman you're becoming is watching. Keep going."); }
-    setLoadingAI(false);
-  };
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514", max_tokens: 1000,
