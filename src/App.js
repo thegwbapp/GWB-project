@@ -26,9 +26,9 @@ const CSS = `
   .fi{animation:fadeIn .35s ease both}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#f5f0e8}
-  button{cursor:pointer;font-family:Georgia,'Times New Roman',serif;transition:all .2s}
+  button{cursor:pointer;font-family:${SERIF};transition:all .2s}
   button:active{opacity:.8;transform:scale(.98)}
-  input,textarea{font-family:Georgia,'Times New Roman',serif}
+  input,textarea{font-family:${SERIF}}
   input::placeholder,textarea::placeholder{color:#4a4030}
   textarea{resize:none}
 `;
@@ -46,17 +46,6 @@ function CircleProgress({ pct, color }) {
     </svg>
   );
 }
-
-const NUDGE_ANGLES = [
-  "Give her a bold direct challenge — push her to act right now.",
-  "Give her something soft and affirming — remind her of her worth.",
-  "Give her a perspective shift — reframe how she sees today.",
-  "Give her a reality check — speak to what she might be avoiding.",
-  "Give her something poetic and inspiring — speak to her soul.",
-  "Give her a practical spark — one specific thing she can do right now.",
-  "Give her a reminder of the bigger picture — why this daily work matters.",
-  "Celebrate where she is right now — even if it is not perfect.",
-];
 
 export default function App() {
   const [screen, setScreen] = useState("splash");
@@ -98,19 +87,17 @@ export default function App() {
   const [visionImagePreview, setVisionImagePreview] = useState(null);
   const [visionCaption, setVisionCaption] = useState("");
   const [uploadingVision, setUploadingVision] = useState(false);
-  const [editingPost, setEditingPost] = useState(null);
-  const [editContent, setEditContent] = useState("");
 
   const aesObj = aesthetic ? AESTHETICS[aesthetic] : null;
   const gold = aesObj?.color || T.gold;
 
+  // -- INIT --
   useEffect(() => {
     const t = setTimeout(async () => {
       try {
         const saved = localStorage.getItem("gwb_user_id");
         if (saved) {
-          const recs = await dbGet("users", "id=eq." + saved + "&limit=1");
-          const data = recs && recs[0] ? recs[0] : null;
+          const recs = await dbGet("users", "id=eq." + saved + "&limit=1"); const data = recs && recs[0] ? recs[0] : null; const error = !data;
           if (data) {
             setUser(data);
             if (data.quiz_done && data.aesthetic) {
@@ -142,7 +129,7 @@ export default function App() {
     if (u.cycle_start) { setCycleStartDate(u.cycle_start); setCycleSaved(true); }
     setDataLoading(false);
     loadWall();
-    loadVisionBoard(u);
+    loadVisionBoard();
   }, []);
 
   const calcStreak = (data) => {
@@ -176,15 +163,15 @@ export default function App() {
           headers: {"apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGVibWdtY2lpZW14ZmhiZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTE5MDksImV4cCI6MjA5MDk4NzkwOX0.AC3NUHkZtd2SDT7YOliQd-m1tuGa8_xOORvyMKo36jc", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGVibWdtY2lpZW14ZmhiZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTE5MDksImV4cCI6MjA5MDk4NzkwOX0.AC3NUHkZtd2SDT7YOliQd-m1tuGa8_xOORvyMKo36jc", "Content-Type": "application/json"},
           body: JSON.stringify({ cycle_start: cycleInput })
         });
-        await res.json();
+        const d = await res.json();
+        console.log("cycle save result:", d);
       } catch(e) { console.error("cycle save error:", e); }
     }
   };
 
-  const loadVisionBoard = async (u) => {
-    const uid = (u || user)?.id;
-    if (!uid) return;
-    const data = await dbGet("vision_board", "user_id=eq." + uid + "&order=created_at.desc");
+  const loadVisionBoard = async () => {
+    if (!user) return;
+    const data = await dbGet("vision_board", "user_id=eq." + user.id + "&order=created_at.desc");
     setVisionPosts(data || []);
   };
 
@@ -238,6 +225,7 @@ export default function App() {
     setReplies(prev => ({ ...prev, [postId]: data || [] }));
   };
 
+  // -- AUTH --
   const handleAuth = async () => {
     const email = emailInput.trim().toLowerCase();
     const dname = displayNameInput.trim();
@@ -246,23 +234,29 @@ export default function App() {
 
     if (isNewUser) {
       if (!dname || dname.length < 2) { setAuthError("Pick a display name (2+ characters)."); setAuthLoading(false); return; }
-      const existingArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&limit=1");
-      const existing = existingArr && existingArr[0] ? existingArr[0] : null;
+
+      // Check email taken
+      const existingArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&limit=1"); const existing = existingArr && existingArr[0] ? existingArr[0] : null;
       if (existing && existing.id) { setAuthError("That email already has an account. Sign in instead."); setAuthLoading(false); return; }
-      const nameCheckArr = await dbGet("users", "display_name=eq." + encodeURIComponent(dname) + "&limit=1");
-      const nameCheck = nameCheckArr && nameCheckArr[0] ? nameCheckArr[0] : null;
+
+      // Check display name taken
+      const nameCheckArr = await dbGet("users", "display_name=eq." + encodeURIComponent(dname) + "&limit=1"); const nameCheck = nameCheckArr && nameCheckArr[0] ? nameCheckArr[0] : null;
       if (nameCheck && nameCheck.id) { setAuthError("That display name is taken. Try another."); setAuthLoading(false); return; }
+
+      // Create user
       const newUser = await dbInsert("users", { email: email, display_name: dname });
       if (!newUser || newUser.code) { setAuthError("Could not create account. Try again."); setAuthLoading(false); return; }
+
       try { localStorage.setItem("gwb_user_id", newUser.id); } catch {}
       setUser(newUser);
       setAuthLoading(false);
       setScreen("quiz");
     } else {
+      // Sign in
       if (!dname || dname.length < 2) { setAuthError("Enter your display name to sign in."); setAuthLoading(false); return; }
-      const foundArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&display_name=eq." + encodeURIComponent(dname) + "&limit=1");
-      const found = foundArr && foundArr[0] ? foundArr[0] : null;
+      const foundArr = await dbGet("users", "email=eq." + encodeURIComponent(email) + "&display_name=eq." + encodeURIComponent(dname) + "&limit=1"); const found = foundArr && foundArr[0] ? foundArr[0] : null;
       if (!found || !found.id) { setAuthError("No account found. Check your email and display name."); setAuthLoading(false); return; }
+
       try { localStorage.setItem("gwb_user_id", found.id); } catch {}
       setUser(found);
       setAuthLoading(false);
@@ -276,6 +270,7 @@ export default function App() {
     }
   };
 
+  // -- QUIZ --
   const handleQuizAnswer = async (option) => {
     setQuizSelected(option);
     setTimeout(async () => {
@@ -296,19 +291,18 @@ export default function App() {
     }, 380);
   };
 
+  // -- ENTER APP --
   const enterApp = async () => {
     const suggested = AESTHETICS[aesthetic]?.goals || [];
-    const saved = [];
-    for (let i = 0; i < suggested.length; i++) {
-      const rec = await dbInsert("goals", { user_id: user.id, goal_text: suggested[i] });
-      if (rec && !rec.code) saved.push(rec);
-    }
+    
+    const saved = []; for (let i = 0; i < suggested.length; i++) { const rec = await dbInsert("goals", { user_id: user.id, goal_text: suggested[i] }); if (rec && !rec.code) saved.push(rec); }
     setGoals(saved);
     setScreen("app");
     setView("today");
     loadWall();
   };
 
+  // -- GOALS --
   const addGoal = async () => {
     if (!newGoal.trim()) return;
     const text = newGoal.trim(); setNewGoal("");
@@ -321,6 +315,7 @@ export default function App() {
     await dbDelete("goals", id);
   };
 
+  // -- CHECK-INS --
   const todayCheckins = checkins.filter(c => c.date === today());
   const checkedIds = new Set(todayCheckins.map(c => c.goal_id));
   const completedCount = goals.filter(g => checkedIds.has(g.id)).length;
@@ -342,6 +337,10 @@ export default function App() {
       }
     }
   };
+
+  // -- WALL --
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState("");
 
   const deletePost = async (postId) => {
     if (!window.confirm("Delete this post?")) return;
@@ -402,28 +401,21 @@ export default function App() {
 
   // -- AI NUDGE --
   const getAINudge = async () => {
-    setLoadingAI(true);
-    setAiMsg("");
+    setLoadingAI(true); setAiMsg("");
     const done = goals.filter(g => checkedIds.has(g.id)).map(g => g.goal_text);
     const pending = goals.filter(g => !checkedIds.has(g.id)).map(g => g.goal_text);
-    const angle = NUDGE_ANGLES[Math.floor(Math.random() * NUDGE_ANGLES.length)];
-    const seed = Math.random().toString(36).substring(7);
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are the voice of The GWB Project - Grow With Boldness. Speak like The Grown Woman Blueprint: refined, warm, direct. No fluff. No emojis. 2-3 sentences max. The user's aesthetic is ${aesObj?.name} - "${aesObj?.tagline}". Address them by display name. Every nudge must feel completely fresh and different. Seed: ${seed}.`,
-          messages: [{ role: "user", content: `Name: ${user?.display_name}\nAesthetic: ${aesObj?.name}\nStreak: ${streak} days\nCompleted: ${done.join(", ") || "none yet"}\nPending: ${pending.join(", ") || "all done!"}\nAngle for this nudge: ${angle}\nGive a nudge from this specific angle. Make it feel different from a generic response.` }],
+          model: "claude-sonnet-4-20250514", max_tokens: 1000,
+          system: `You are the voice of The GWB Project ? Grow With Boldness. Speak like The Grown Woman Blueprint: refined, warm, direct. No fluff. No emojis. 2-3 sentences. The user's aesthetic is ${aesObj?.name} ? "${aesObj?.tagline}". Address them by display name.`,
+          messages: [{ role: "user", content: `Name: ${user?.display_name}\nAesthetic: ${aesObj?.name}\nStreak: ${streak} days\nCompleted: ${done.join(", ") || "none yet"}\nPending: ${pending.join(", ") || "all done!"}\nGive a personal nudge.` }],
         }),
       });
       const data = await res.json();
       setAiMsg(data.content?.map(b => b.text || "").join("") || "The woman you're becoming is watching. Keep going.");
-    } catch {
-      setAiMsg("The woman you're becoming is watching. Keep going.");
-    }
+    } catch { setAiMsg("The woman you're becoming is watching. Keep going."); }
     setLoadingAI(false);
   };
 
@@ -451,9 +443,11 @@ export default function App() {
           <div style={{ width:"36px", height:"1px", background:T.gold, margin:"0 auto 12px" }} />
           <p style={{ fontSize:"11px", letterSpacing:"3px", color:T.muted }}>DAILY CHECK-IN</p>
         </div>
+
         <div className="fu2" style={{ borderLeft:`2px solid ${T.gold}`, padding:"12px 16px", background:"rgba(201,168,76,0.04)", borderRadius:"0 8px 8px 0", marginBottom:"28px" }}>
           <p style={{ fontStyle:"italic", color:T.muted, fontSize:"15px", lineHeight:1.6 }}>{quote}</p>
         </div>
+
         <div className="fu3" style={{ display:"flex", marginBottom:"16px", background:T.card, border:`1px solid ${T.border}`, borderRadius:"10px", padding:"4px" }}>
           {[["Join the Circle", true], ["Sign In", false]].map(([label, val]) => (
             <button key={label} onClick={() => { setIsNewUser(val); setAuthError(""); }}
@@ -462,6 +456,7 @@ export default function App() {
             </button>
           ))}
         </div>
+
         <div className="fu4" style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:"14px", padding:"24px" }}>
           <div style={{ display:"flex", flexDirection:"column", gap:"10px", marginBottom:"10px" }}>
             <input value={emailInput} onChange={e => { setEmailInput(e.target.value); setAuthError(""); }}
@@ -476,7 +471,7 @@ export default function App() {
           {authError && <p style={{ color:"#c07a5a", fontSize:"13px", fontStyle:"italic", marginBottom:"10px", lineHeight:1.5 }}>{authError}</p>}
           <button onClick={handleAuth} disabled={authLoading}
             style={{ width:"100%", padding:"15px", background:T.gold, border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", opacity: authLoading ? 0.6 : 1 }}>
-            {authLoading ? "· · ·" : isNewUser ? "ENTER THE CIRCLE" : "WELCOME BACK"}
+            {authLoading ? "?  ?  ?" : isNewUser ? "ENTER THE CIRCLE" : "WELCOME BACK"}
           </button>
         </div>
       </div>
@@ -557,23 +552,26 @@ export default function App() {
       <div style={{ position:"fixed", top:0, left:0, right:0, height:"160px", background:`radial-gradient(ellipse at 70% 0%, ${gold}18 0%, transparent 70%)`, pointerEvents:"none", zIndex:0 }} />
       <div style={{ maxWidth:"480px", margin:"0 auto", padding:"0 18px", position:"relative", zIndex:1 }}>
 
+        {/* Header */}
         <div style={{ padding:"26px 0 14px" }}>
           <p style={{ fontSize:"10px", letterSpacing:"5px", color:T.muted, marginBottom:"2px" }}>THE GROWN WOMAN</p>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <h1 style={{ fontSize:"28px", fontWeight:"400", color:T.text, letterSpacing:"1px" }}>GWB Project</h1>
             {streak > 0 && (
               <div style={{ display:"flex", alignItems:"center", gap:"5px", padding:"4px 10px", background:`${gold}18`, border:`1px solid ${gold}44`, borderRadius:"20px" }}>
-                <span style={{ color:gold, fontSize:"10px" }}>{aesObj?.icon||"✦"}</span>
+                <span style={{ color:gold, fontSize:"10px" }}>{aesObj?.icon||"?"}</span>
                 <span style={{ fontSize:"11px", color:gold, letterSpacing:"1px" }}>{streak}d streak</span>
               </div>
             )}
           </div>
         </div>
 
+        {/* Quote */}
         <div style={{ borderLeft:`2px solid ${gold}`, padding:"11px 14px", background:`${gold}08`, borderRadius:"0 8px 8px 0", marginBottom:"14px" }}>
           <p style={{ fontStyle:"italic", color:T.muted, fontSize:"14px", lineHeight:1.5 }}>{quote}</p>
         </div>
 
+        {/* Aesthetic badge */}
         {aesObj && (
           <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 14px", background:T.card, border:`1px solid ${T.border}`, borderRadius:"10px", marginBottom:"14px" }}>
             <span style={{ fontSize:"18px", color:gold }}>{aesObj.icon}</span>
@@ -585,6 +583,7 @@ export default function App() {
           </div>
         )}
 
+        {/* Alignment ring */}
         {view==="today" && goals.length > 0 && (
           <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:"14px", padding:"18px", marginBottom:"12px", display:"flex", alignItems:"center", gap:"18px" }}>
             <CircleProgress pct={pct} color={gold} />
@@ -598,11 +597,12 @@ export default function App() {
           </div>
         )}
 
+        {/* AI nudge */}
         {view==="today" && goals.length > 0 && (
           <div style={{ marginBottom:"12px" }}>
             <button onClick={getAINudge} disabled={loadingAI}
               style={{ width:"100%", padding:"12px", background:"transparent", border:`1px solid ${gold}`, color:gold, fontSize:"11px", letterSpacing:"3px", borderRadius:"10px", opacity: loadingAI?0.6:1 }}>
-              {loadingAI ? "· · ·" : `${aesObj?.icon||"✦"}  RECEIVE YOUR NUDGE`}
+              {loadingAI ? "?  ?  ?" : `${aesObj?.icon||"?"}  RECEIVE YOUR NUDGE`}
             </button>
             {aiMsg && (
               <div className="fi" style={{ marginTop:"10px", padding:"14px 16px", background:T.card, border:`1px solid ${T.border}`, borderLeft:`3px solid ${gold}`, borderRadius:"0 10px 10px 0" }}>
@@ -615,11 +615,12 @@ export default function App() {
 
         {dataLoading && <div style={{ textAlign:"center", padding:"50px 0", color:T.dim, letterSpacing:"4px", fontSize:"11px", animation:"shimmer 1.5s infinite" }}>LOADING</div>}
 
+        {/* -- TODAY -- */}
         {!dataLoading && view==="today" && (
           <div>
             {goals.length===0 ? (
               <div style={{ textAlign:"center", padding:"40px 0", color:T.dim }}>
-                <p style={{ fontSize:"26px", marginBottom:"12px", color:gold, opacity:.4 }}>{aesObj?.icon||"◇"}</p>
+                <p style={{ fontSize:"26px", marginBottom:"12px", color:gold, opacity:.4 }}>{aesObj?.icon||"?"}</p>
                 <p style={{ fontSize:"15px", fontStyle:"italic", lineHeight:1.8, color:T.muted }}>No non-negotiables yet.<br/>Head to Goals to add some.</p>
               </div>
             ) : (
@@ -642,60 +643,7 @@ export default function App() {
           </div>
         )}
 
-        {!dataLoading && view==="today" && goals.length > 0 && (
-          <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"18px", marginBottom:"12px" }}>
-            <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"16px" }}>THIS WEEK</p>
-            {(() => {
-              const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-              const now = new Date();
-              const weekDays = [];
-              const dayOfWeek = now.getDay();
-              const startOfWeek = new Date(now);
-              startOfWeek.setDate(now.getDate() - dayOfWeek);
-              const todayKey = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
-              for (let i = 0; i <= 6; i++) {
-                const d = new Date(startOfWeek);
-                d.setDate(startOfWeek.getDate() + i);
-                const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
-                const dayCheckins = checkins.filter(function(c){ return c.date === key; });
-                const done = dayCheckins.length;
-                const total = goals.length;
-                const dayPct = total ? Math.round(done / total * 100) : 0;
-                const isFuture = d > now;
-                weekDays.push({ label: dayNames[i], key, done, total, pct: dayPct, isToday: key === todayKey, isFuture });
-              }
-              const totalPossible = goals.length * 7;
-              const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
-              const weekScore = totalPossible ? Math.round(totalDone / totalPossible * 100) : 0;
-              const g = aesObj ? aesObj.color : "#c9a84c";
-              return (
-                <div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:"14px", gap:"4px" }}>
-                    {weekDays.map(function(day) {
-                      return (
-                        <div key={day.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", flex:1 }}>
-                          <div style={{ width:"100%", height:"60px", background:T.bg, border:"1px solid "+T.border, borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
-                            <div style={{ width:"100%", height:day.pct+"%", background: day.isFuture ? "transparent" : (day.isToday ? g : (day.pct===100 ? g : T.accent)), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
-                          </div>
-                          <p style={{ fontSize:"9px", letterSpacing:"1px", color: day.isToday ? g : T.muted, fontFamily:"Georgia,serif" }}>{day.label}</p>
-                          <p style={{ fontSize:"9px", color: day.pct===100 ? g : T.dim, fontFamily:"Georgia,serif" }}>{day.done}/{day.total}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ borderTop:"1px solid "+T.border, paddingTop:"14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <div>
-                      <p style={{ fontSize:"10px", letterSpacing:"3px", color:T.muted, marginBottom:"2px" }}>WEEKLY SCORE</p>
-                      <p style={{ fontSize:"11px", color:T.dim, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{totalDone} of {totalPossible} possible</p>
-                    </div>
-                    <p style={{ fontSize:"36px", fontWeight:"300", color: weekScore >= 70 ? g : weekScore >= 40 ? "#9ab0c4" : T.muted, letterSpacing:"-1px" }}>{weekScore}%</p>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
+        {/* -- GOALS -- */}
         {!dataLoading && view==="goals" && (
           <div>
             <div style={{ display:"flex", marginBottom:"12px" }}>
@@ -708,9 +656,9 @@ export default function App() {
               : <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:"14px", overflow:"hidden" }}>
                   {goals.map((goal, i) => (
                     <div key={goal.id} style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px", borderTop: i>0?`1px solid ${T.border}`:"none" }}>
-                      <span style={{ color:gold, fontSize:"13px", flexShrink:0 }}>{aesObj?.icon||"✦"}</span>
+                      <span style={{ color:gold, fontSize:"13px", flexShrink:0 }}>{aesObj?.icon||"?"}</span>
                       <span style={{ flex:1, fontSize:"15px", color:T.text, lineHeight:1.4, fontStyle:"italic" }}>{goal.goal_text}</span>
-                      <button onClick={() => removeGoal(goal.id)} style={{ background:"none", border:"none", color:T.dim, fontSize:"18px", padding:"0 4px" }}>×</button>
+                      <button onClick={() => removeGoal(goal.id)} style={{ background:"none", border:"none", color:T.dim, fontSize:"18px", padding:"0 4px" }}>x</button>
                     </div>
                   ))}
                 </div>
@@ -722,8 +670,10 @@ export default function App() {
           </div>
         )}
 
+        {/* -- COMMUNITY WALL -- */}
         {view==="wall" && (
           <div>
+            {/* Composer */}
             <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:"14px", padding:"16px", marginBottom:"16px" }}>
               <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"12px" }}>SHARE WITH THE CIRCLE</p>
               <textarea value={postContent} onChange={e => setPostContent(e.target.value)} placeholder="A win, reflection, or encouragement..." rows={3}
@@ -732,7 +682,7 @@ export default function App() {
                 <div style={{ position:"relative", marginBottom:"10px" }}>
                   <img src={postImagePreview} alt="preview" style={{ width:"100%", borderRadius:"8px", maxHeight:"200px", objectFit:"cover" }} />
                   <button onClick={() => { setPostImage(null); setPostImagePreview(null); }}
-                    style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(26,22,18,0.8)", border:"none", color:T.text, width:"28px", height:"28px", borderRadius:"50%", fontSize:"16px" }}>×</button>
+                    style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(26,22,18,0.8)", border:"none", color:T.text, width:"28px", height:"28px", borderRadius:"50%", fontSize:"16px" }}>?</button>
                 </div>
               )}
               <div style={{ display:"flex", gap:"8px" }}>
@@ -747,6 +697,7 @@ export default function App() {
               </div>
             </div>
 
+            {/* Posts */}
             {posts.length===0
               ? <div style={{ textAlign:"center", padding:"40px 0", color:T.dim, fontSize:"15px", fontStyle:"italic" }}>Be the first to share with the circle.</div>
               : <div style={{ display:"flex", flexDirection:"column", gap:"12px" }}>
@@ -758,6 +709,7 @@ export default function App() {
                     const reactionCounts = {};
                     postReactions.forEach(r => { reactionCounts[r.emoji] = (reactionCounts[r.emoji]||0)+1; });
                     const myReactions = new Set(postReactions.filter(r => r.user_id===user?.id).map(r => r.emoji));
+
                     return (
                       <div key={post.id} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:"14px", overflow:"hidden" }}>
                         <div style={{ padding:"14px 16px 0" }}>
@@ -770,8 +722,10 @@ export default function App() {
                           </div>
                           {post.content && <p style={{ fontSize:"16px", lineHeight:1.65, color:T.text, fontStyle:"italic", marginBottom:"10px" }}>"{post.content}"</p>}
                           {post.image_url && <img src={post.image_url} alt="post" style={{ width:"100%", borderRadius:"8px", maxHeight:"280px", objectFit:"cover", marginBottom:"10px" }} />}
-                          {post.streak > 1 && <p style={{ fontSize:"11px", color:T.dim, marginBottom:"10px" }}>{postAes?.icon||"✦"} {post.streak} day streak</p>}
+                          {post.streak > 1 && <p style={{ fontSize:"11px", color:T.dim, marginBottom:"10px" }}>{postAes?.icon||"?"} {post.streak} day streak</p>}
                         </div>
+
+                        {/* Reactions */}
                         <div style={{ padding:"0 16px 10px", display:"flex", gap:"6px", flexWrap:"wrap" }}>
                           {EMOJIS.map(emoji => {
                             const count = reactionCounts[emoji]||0;
@@ -784,6 +738,8 @@ export default function App() {
                             );
                           })}
                         </div>
+
+                        {/* Replies */}
                         <div style={{ borderTop:`1px solid ${T.border}` }}>
                           <button onClick={() => { if(!isExpanded){setExpandedPost(post.id);loadReplies(post.id);}else setExpandedPost(null); }}
                             style={{ width:"100%", padding:"10px 16px", background:"none", border:"none", color:T.dim, fontSize:"12px", letterSpacing:"2px", textAlign:"left" }}>
@@ -795,7 +751,7 @@ export default function App() {
                                 const rAes = reply.aesthetic ? AESTHETICS[reply.aesthetic] : null;
                                 return (
                                   <div key={reply.id} style={{ padding:"10px 0", borderTop: i>0?`1px solid ${T.border}`:"none", display:"flex", gap:"10px" }}>
-                                    <span style={{ color:rAes?.color||T.muted, fontSize:"13px", flexShrink:0, marginTop:"2px" }}>{rAes?.icon||"◎"}</span>
+                                    <span style={{ color:rAes?.color||T.muted, fontSize:"13px", flexShrink:0, marginTop:"2px" }}>{rAes?.icon||"?"}</span>
                                     <div>
                                       <span style={{ fontSize:"12px", color:gold, letterSpacing:"1px", marginRight:"8px" }}>@{reply.display_name}</span>
                                       <p style={{ fontSize:"14px", color:T.muted, lineHeight:1.5, fontStyle:"italic", marginTop:"2px" }}>{reply.content}</p>
@@ -807,7 +763,7 @@ export default function App() {
                                 <input value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => e.key==="Enter"&&submitReply(post.id)}
                                   placeholder="Write a reply..." style={{ flex:1, padding:"10px 12px", background:T.bg, border:`1px solid ${T.border}`, color:T.text, fontSize:"14px", borderRadius:"8px 0 0 8px", outline:"none", fontStyle:"italic" }} />
                                 <button onClick={() => submitReply(post.id)}
-                                  style={{ padding:"10px 14px", background:gold, border:"none", color:T.bg, fontSize:"15px", borderRadius:"0 8px 8px 0" }}>→</button>
+                                  style={{ padding:"10px 14px", background:gold, border:"none", color:T.bg, fontSize:"15px", borderRadius:"0 8px 8px 0" }}>?</button>
                               </div>
                             </div>
                           )}
@@ -819,131 +775,190 @@ export default function App() {
             }
           </div>
         )}
-
-        {!dataLoading && view==="cycle" && (
-          <div>
-            {!cycleSaved ? (
-              <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px" }}>
-                <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"8px" }}>YOUR CYCLE</p>
-                <p style={{ fontSize:"15px", color:T.muted, fontStyle:"italic", lineHeight:1.6, marginBottom:"20px" }}>Enter the first day of your last period and we will tell you exactly what your body needs right now.</p>
-                <input type="date" value={cycleInput} onChange={function(e){setCycleInput(e.target.value);}}
-                  style={{ width:"100%", padding:"13px 16px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"16px", borderRadius:"8px", outline:"none", marginBottom:"12px", fontFamily:"Georgia,serif" }}/>
-                <button onClick={saveCycleDate}
-                  style={{ width:"100%", padding:"14px", background:"#c9a84c", border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif" }}>
-                  REVEAL MY PHASE
-                </button>
-              </div>
-            ) : (
-              <div>
-                {(() => {
-                  const phase = getCyclePhase(cycleStartDate);
-                  return (
-                    <div>
-                      <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px", textAlign:"center" }}>
-                        <p style={{ fontSize:"13px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>{phase.icon}</p>
-                        <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>{phase.days} - Day {phase.day}</p>
-                        <h2 style={{ fontSize:"28px", fontWeight:"400", color:phase.color, marginBottom:"6px", letterSpacing:"1px" }}>{phase.phase} Phase</h2>
-                        <div style={{ width:"36px", height:"1px", background:phase.color, margin:"12px auto" }}></div>
-                        {(() => {
-                          const start = new Date(cycleStartDate);
-                          const now = new Date();
-                          const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-                          const dayInCycle = (diff % 28) + 1;
-                          const daysUntilNext = 28 - dayInCycle + 1;
-                          return (
-                            <div style={{ background:"rgba(201,168,76,0.06)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:"10px", padding:"14px 18px", marginBottom:"16px" }}>
-                              <p style={{ fontSize:"10px", letterSpacing:"3px", color:"#c9a84c", marginBottom:"4px" }}>NEXT PERIOD IN</p>
-                              <p style={{ fontSize:"32px", fontWeight:"300", color:"#c9a84c", letterSpacing:"2px", lineHeight:1 }}>{daysUntilNext} {daysUntilNext === 1 ? "day" : "days"}</p>
-                            </div>
-                          );
-                        })()}
-                        <p style={{ fontSize:"15px", lineHeight:1.8, color:T.muted, fontStyle:"italic" }}>{phase.body}</p>
-                      </div>
-                      <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"20px", marginBottom:"14px" }}>
-                        <div style={{ display:"flex", flexDirection:"column", gap:"16px" }}>
-                          <div>
-                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>ENERGY</p>
-                            <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.energy}</p>
-                          </div>
-                          <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
-                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>MOVEMENT</p>
-                            <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.workout}</p>
-                          </div>
-                          <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
-                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>NOURISHMENT</p>
-                            <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.foods}</p>
-                          </div>
-                          <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
-                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"8px" }}>GWB SAYS</p>
-                            <p style={{ fontSize:"16px", color:T.text, fontStyle:"italic", lineHeight:1.7 }}>"{phase.affirmation}"</p>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={function(){setCycleSaved(false);setCycleInput("");}}
-                        style={{ width:"100%", padding:"12px", background:"transparent", border:"1px solid "+T.border, color:T.muted, fontSize:"11px", letterSpacing:"3px", borderRadius:"10px", fontFamily:"Georgia,serif" }}>
-                        UPDATE CYCLE DATE
-                      </button>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!dataLoading && view==="vision" && (
-          <div>
-            <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>YOUR VISION BOARD</p>
-            <p style={{ fontSize:"13px", color:T.dim, fontStyle:"italic", marginBottom:"16px", lineHeight:1.5 }}>Your private space. Add images of what you are building toward.</p>
-            <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"16px", marginBottom:"16px" }}>
-              {visionImagePreview ? (
-                <div style={{ position:"relative", marginBottom:"12px" }}>
-                  <img src={visionImagePreview} style={{ width:"100%", borderRadius:"10px", maxHeight:"240px", objectFit:"cover" }}/>
-                  <button onClick={function(){setVisionImage(null);setVisionImagePreview(null);}}
-                    style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(26,22,18,0.8)", border:"none", color:T.text, width:"28px", height:"28px", borderRadius:"50%", fontSize:"16px", fontFamily:"Georgia,serif" }}>×</button>
-                </div>
-              ) : (
-                <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px", background:T.bg, border:"2px dashed "+T.border, borderRadius:"10px", cursor:"pointer", marginBottom:"12px" }}>
-                  <p style={{ fontSize:"24px", color:T.dim, marginBottom:"8px" }}>◉</p>
-                  <p style={{ fontSize:"12px", letterSpacing:"2px", color:T.muted, fontFamily:"Georgia,serif" }}>TAP TO ADD IMAGE</p>
-                  <input type="file" accept="image/*" onChange={handleVisionImageSelect} style={{ display:"none" }}/>
-                </label>
-              )}
-              <input value={visionCaption} onChange={function(e){setVisionCaption(e.target.value);}}
-                placeholder="Add a caption... (optional)"
-                style={{ width:"100%", padding:"11px 14px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"14px", borderRadius:"8px", outline:"none", fontStyle:"italic", fontFamily:"Georgia,serif", marginBottom:"10px" }}/>
-              <button onClick={submitVisionPost} disabled={!visionImage || uploadingVision}
-                style={{ width:"100%", padding:"13px", background: visionImage ? (aesObj ? aesObj.color : T.gold) : T.accent, border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif", opacity: !visionImage ? 0.5 : 1 }}>
-                {uploadingVision ? "ADDING TO YOUR BOARD..." : "ADD TO VISION BOARD"}
-              </button>
-            </div>
-            {visionPosts.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"40px 0", color:T.dim }}>
-                <p style={{ fontSize:"32px", marginBottom:"12px", color:aesObj ? aesObj.color : T.gold, opacity:0.4 }}>◉</p>
-                <p style={{ fontSize:"15px", fontStyle:"italic", lineHeight:1.8, color:T.muted }}>Your vision board is empty.<br/>Start adding images of what you are building.</p>
-              </div>
-            ) : (
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
-                {visionPosts.map(function(post) {
-                  return (
-                    <div key={post.id} style={{ position:"relative", borderRadius:"10px", overflow:"hidden" }}>
-                      <img src={post.image_url} style={{ width:"100%", height:"160px", objectFit:"cover", display:"block" }}/>
-                      {post.caption && (
-                        <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(26,22,18,0.9))", padding:"20px 10px 8px" }}>
-                          <p style={{ fontSize:"12px", color:T.text, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{post.caption}</p>
-                        </div>
-                      )}
-                      <button onClick={function(){deleteVisionPost(post.id);}}
-                        style={{ position:"absolute", top:"6px", right:"6px", background:"rgba(26,22,18,0.7)", border:"none", color:T.text, width:"24px", height:"24px", borderRadius:"50%", fontSize:"12px", fontFamily:"Georgia,serif", cursor:"pointer" }}>×</button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
+      {!dataLoading && view==="today" && goals.length > 0 && (
+        <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"18px", marginBottom:"12px" }}>
+          <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"16px" }}>THIS WEEK</p>
+          {(() => {
+            const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+            const now = new Date();
+            const weekDays = [];
+            const dayOfWeek = now.getDay();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - dayOfWeek);
+            const todayKey = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
+            for (let i = 0; i <= 6; i++) {
+              const d = new Date(startOfWeek);
+              d.setDate(startOfWeek.getDate() + i);
+              const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+              const dayCheckins = checkins.filter(function(c){ return c.date === key; });
+              const done = dayCheckins.length;
+              const total = goals.length;
+              const pct = total ? Math.round(done / total * 100) : 0;
+              const isFuture = d > now;
+              weekDays.push({ label: dayNames[i], key, done, total, pct, isToday: key === todayKey, isFuture });
+            }
+            const totalPossible = goals.length * 7;
+            const totalDone = weekDays.reduce(function(sum, d){ return sum + d.done; }, 0);
+            const weekScore = totalPossible ? Math.round(totalDone / totalPossible * 100) : 0;
+            const g = aesObj ? aesObj.color : "#c9a84c";
+            return (
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:"14px", gap:"4px" }}>
+                  {weekDays.map(function(day) {
+                    return (
+                      <div key={day.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", flex:1 }}>
+                        <div style={{ width:"100%", height:"60px", background:T.bg, border:"1px solid "+T.border, borderRadius:"4px", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
+                          <div style={{ width:"100%", height:day.pct+"%", background: day.isFuture ? "transparent" : (day.isToday ? g : (day.pct===100 ? g : T.accent)), borderRadius:"4px", transition:"height 0.5s ease", minHeight: day.done > 0 ? "4px" : "0" }}></div>
+                        </div>
+                        <p style={{ fontSize:"9px", letterSpacing:"1px", color: day.isToday ? g : T.muted, fontFamily:"Georgia,serif" }}>{day.label}</p>
+                        <p style={{ fontSize:"9px", color: day.pct===100 ? g : T.dim, fontFamily:"Georgia,serif" }}>{day.done}/{day.total}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ borderTop:"1px solid "+T.border, paddingTop:"14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <p style={{ fontSize:"10px", letterSpacing:"3px", color:T.muted, marginBottom:"2px" }}>WEEKLY SCORE</p>
+                    <p style={{ fontSize:"11px", color:T.dim, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{totalDone} of {totalPossible} possible</p>
+                  </div>
+                  <p style={{ fontSize:"36px", fontWeight:"300", color: weekScore >= 70 ? g : weekScore >= 40 ? "#9ab0c4" : T.muted, letterSpacing:"-1px" }}>{weekScore}%</p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {!dataLoading && view==="cycle" && (
+        <div>
+          {!cycleSaved ? (
+            <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px" }}>
+              <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"8px" }}>YOUR CYCLE</p>
+              <p style={{ fontSize:"15px", color:T.muted, fontStyle:"italic", lineHeight:1.6, marginBottom:"20px" }}>Enter the first day of your last period and we will tell you exactly what your body needs right now.</p>
+              <input type="date" value={cycleInput} onChange={function(e){setCycleInput(e.target.value);}}
+                style={{ width:"100%", padding:"13px 16px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"16px", borderRadius:"8px", outline:"none", marginBottom:"12px", fontFamily:"Georgia,serif" }}/>
+              <button onClick={saveCycleDate}
+                style={{ width:"100%", padding:"14px", background:"#c9a84c", border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif" }}>
+                REVEAL MY PHASE
+              </button>
+            </div>
+          ) : (
+            <div>
+              {(() => {
+                const phase = getCyclePhase(cycleStartDate);
+                return (
+                  <div>
+                    <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"24px", marginBottom:"14px", textAlign:"center" }}>
+                      <p style={{ fontSize:"13px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>{phase.icon}</p>
+                      <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>{phase.days} - Day {phase.day}</p>
+                      <h2 style={{ fontSize:"28px", fontWeight:"400", color:phase.color, marginBottom:"6px", letterSpacing:"1px" }}>{phase.phase} Phase</h2>
+                      <div style={{ width:"36px", height:"1px", background:phase.color, margin:"12px auto" }}></div>
+                      {(() => {
+                        const start = new Date(cycleStartDate);
+                        const now = new Date();
+                        const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+                        const dayInCycle = (diff % 28) + 1;
+                        const daysUntilNext = 28 - dayInCycle + 1;
+                        return (
+                          <div style={{ background:"rgba(201,168,76,0.06)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:"10px", padding:"14px 18px", marginBottom:"16px" }}>
+                            <p style={{ fontSize:"10px", letterSpacing:"3px", color:"#c9a84c", marginBottom:"4px" }}>NEXT PERIOD IN</p>
+                            <p style={{ fontSize:"32px", fontWeight:"300", color:"#c9a84c", letterSpacing:"2px", lineHeight:1 }}>{daysUntilNext} {daysUntilNext === 1 ? "day" : "days"}</p>
+                          </div>
+                        );
+                      })()}
+                      <p style={{ fontSize:"15px", lineHeight:1.8, color:T.muted, fontStyle:"italic" }}>{phase.body}</p>
+                    </div>
+                    <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"20px", marginBottom:"14px" }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:"16px" }}>
+                        <div>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>ENERGY</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.energy}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>MOVEMENT</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.workout}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"6px" }}>NOURISHMENT</p>
+                          <p style={{ fontSize:"15px", color:T.text, fontStyle:"italic" }}>{phase.foods}</p>
+                        </div>
+                        <div style={{ borderTop:"1px solid "+T.border, paddingTop:"16px" }}>
+                          <p style={{ fontSize:"10px", letterSpacing:"3px", color:phase.color, marginBottom:"8px" }}>GWB SAYS</p>
+                          <p style={{ fontSize:"16px", color:T.text, fontStyle:"italic", lineHeight:1.7 }}>"{phase.affirmation}"</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={function(){setCycleSaved(false);setCycleInput("");}}
+                      style={{ width:"100%", padding:"12px", background:"transparent", border:"1px solid "+T.border, color:T.muted, fontSize:"11px", letterSpacing:"3px", borderRadius:"10px", fontFamily:"Georgia,serif" }}>
+                      UPDATE CYCLE DATE
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!dataLoading && view==="vision" && (
+        <div>
+          <p style={{ fontSize:"10px", letterSpacing:"4px", color:T.muted, marginBottom:"6px" }}>YOUR VISION BOARD</p>
+          <p style={{ fontSize:"13px", color:T.dim, fontStyle:"italic", marginBottom:"16px", lineHeight:1.5 }}>Your private space. Add images of what you are building toward.</p>
+
+          {/* Upload section */}
+          <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:"14px", padding:"16px", marginBottom:"16px" }}>
+            {visionImagePreview ? (
+              <div style={{ position:"relative", marginBottom:"12px" }}>
+                <img src={visionImagePreview} style={{ width:"100%", borderRadius:"10px", maxHeight:"240px", objectFit:"cover" }}/>
+                <button onClick={function(){setVisionImage(null);setVisionImagePreview(null);}}
+                  style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(26,22,18,0.8)", border:"none", color:T.text, width:"28px", height:"28px", borderRadius:"50%", fontSize:"16px", fontFamily:"Georgia,serif" }}>x</button>
+              </div>
+            ) : (
+              <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px", background:T.bg, border:"2px dashed "+T.border, borderRadius:"10px", cursor:"pointer", marginBottom:"12px" }}>
+                <p style={{ fontSize:"24px", color:T.dim, marginBottom:"8px" }}>{"◉"}</p>
+                <p style={{ fontSize:"12px", letterSpacing:"2px", color:T.muted, fontFamily:"Georgia,serif" }}>TAP TO ADD IMAGE</p>
+                <input type="file" accept="image/*" onChange={handleVisionImageSelect} style={{ display:"none" }}/>
+              </label>
+            )}
+            <input value={visionCaption} onChange={function(e){setVisionCaption(e.target.value);}}
+              placeholder="Add a caption... (optional)"
+              style={{ width:"100%", padding:"11px 14px", background:T.bg, border:"1px solid "+T.border, color:T.text, fontSize:"14px", borderRadius:"8px", outline:"none", fontStyle:"italic", fontFamily:"Georgia,serif", marginBottom:"10px" }}/>
+            <button onClick={submitVisionPost} disabled={!visionImage || uploadingVision}
+              style={{ width:"100%", padding:"13px", background: visionImage ? (aesObj ? aesObj.color : T.gold) : T.accent, border:"none", color:T.bg, fontSize:"11px", letterSpacing:"4px", fontWeight:"600", borderRadius:"8px", fontFamily:"Georgia,serif", opacity: !visionImage ? 0.5 : 1 }}>
+              {uploadingVision ? "ADDING TO YOUR BOARD..." : "ADD TO VISION BOARD"}
+            </button>
+          </div>
+
+          {/* Vision grid */}
+          {visionPosts.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0", color:T.dim }}>
+              <p style={{ fontSize:"32px", marginBottom:"12px", color:aesObj ? aesObj.color : T.gold, opacity:0.4 }}>{"◉"}</p>
+              <p style={{ fontSize:"15px", fontStyle:"italic", lineHeight:1.8, color:T.muted }}>Your vision board is empty.<br/>Start adding images of what you are building.</p>
+            </div>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+              {visionPosts.map(function(post) {
+                return (
+                  <div key={post.id} style={{ position:"relative", borderRadius:"10px", overflow:"hidden" }}>
+                    <img src={post.image_url} style={{ width:"100%", height:"160px", objectFit:"cover", display:"block" }}/>
+                    {post.caption && (
+                      <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(26,22,18,0.9))", padding:"20px 10px 8px" }}>
+                        <p style={{ fontSize:"12px", color:T.text, fontStyle:"italic", fontFamily:"Georgia,serif" }}>{post.caption}</p>
+                      </div>
+                    )}
+                    <button onClick={function(){deleteVisionPost(post.id);}}
+                      style={{ position:"absolute", top:"6px", right:"6px", background:"rgba(26,22,18,0.7)", border:"none", color:T.text, width:"24px", height:"24px", borderRadius:"50%", fontSize:"12px", fontFamily:"Georgia,serif", cursor:"pointer" }}>x</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom Nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.card, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-around", padding:"10px 0 20px", zIndex:50 }}>
         {[
           { v:"today", icon:"◈", label:"HOME" },
@@ -960,9 +975,10 @@ export default function App() {
         ))}
       </div>
 
+      {/* Celebration */}
       {celebrating && (
         <div className="fi" style={{ position:"fixed", inset:0, background:"rgba(26,22,18,0.97)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:100 }}>
-          <p style={{ fontSize:"52px", marginBottom:"16px", color:gold, animation:"shimmer 1.5s infinite" }}>{aesObj?.icon||"✦"}</p>
+          <p style={{ fontSize:"52px", marginBottom:"16px", color:gold, animation:"shimmer 1.5s infinite" }}>{aesObj?.icon||"?"}</p>
           <p style={{ fontSize:"28px", fontWeight:"300", color:T.text, letterSpacing:"2px", marginBottom:"10px" }}>Fully Aligned.</p>
           <p style={{ fontSize:"12px", letterSpacing:"4px", color:gold }}>THE WOMAN YOU'RE BECOMING IS PROUD.</p>
         </div>
