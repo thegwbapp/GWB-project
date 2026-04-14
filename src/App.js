@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AESTHETICS, QUESTIONS, QUOTES } from "./data";
-import { atGet, atPost, atPatch, atDelete, uploadImage } from "./api";
+import { dbGet, dbInsert, dbUpdate, dbDelete, uploadImage } from "./api";
 
 const today = () => new Date().toISOString().split("T")[0];
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return d; } };
