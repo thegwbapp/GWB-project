@@ -561,7 +561,6 @@ export default function App() {
       <style>{CSS}</style>
       <div style={{maxWidth:"480px",margin:"0 auto",padding:"0 18px",position:"relative"}}>
         <div style={{padding:"26px 0 14px"}}>
-          <p style={{fontSize:"10px",letterSpacing:"5px",color:T.muted,marginBottom:"2px"}}>THE GROWN WOMAN BLUEPRINT</p>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <h1 style={{fontSize:"28px",fontWeight:"400",color:T.text,letterSpacing:"1px"}}>Be Her Daily</h1>
             {streak>0&&<div style={{display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",background:`${gold}18`,border:`1px solid ${gold}44`,borderRadius:"20px"}}>
