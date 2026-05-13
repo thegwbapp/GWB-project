@@ -1,0 +1,19 @@
+{
+  "name": "Be Her Daily",
+  "short_name": "Be Her Daily",
+  "description": "The Grown Woman Blueprint — Daily Check-In",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf8f8",
+  "theme_color": "#c4848a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "health", "productivity"]
+}
