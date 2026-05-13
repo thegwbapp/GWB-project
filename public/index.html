@@ -17,6 +17,15 @@
       html { -webkit-text-size-adjust: 100%; }
       body { background: #fdf8f8; overscroll-behavior: none; }
     </style>
+ <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "605542f2-e96a-4614-bf47-65d182f45c72",
+    });
+  });
+</script>
   </head>
   <body>
     <div id="root"></div>
