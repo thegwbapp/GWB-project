@@ -657,7 +657,7 @@ export default function App() {
 
           {/* Mood Tracker */}
           <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"16px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"14px",fontFamily:SANS}}>HOW IS SHE FEELING?</p>
+            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"14px",fontFamily:SANS}}>HOW ARE YOU FEELING?</p>
             <div style={{display:"flex",justifyContent:"space-between",gap:"6px"}}>
               {MOODS.map(m => (
                 <button key={m.label} onClick={()=>setMood(mood===m.label?null:m.label)}
@@ -710,7 +710,7 @@ export default function App() {
 
             {/* Her Week */}
             {goals.length>0&&<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>HER WEEK</p>
+              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>YOUR WEEK</p>
               {(()=>{
                 const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
                 const now=new Date();
@@ -742,7 +742,7 @@ export default function App() {
                     </div>
                     <div style={{borderTop:`1px solid ${T.border}`,paddingTop:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div>
-                        <p style={{fontSize:"9px",letterSpacing:"3px",color:T.dim,marginBottom:"2px",fontFamily:SANS}}>HER SCORE</p>
+                        <p style={{fontSize:"9px",letterSpacing:"3px",color:T.dim,marginBottom:"2px",fontFamily:SANS}}>YOUR SCORE</p>
                         <p style={{fontSize:"11px",color:T.muted,fontStyle:"italic"}}>{totalDone} of {totalPossible} possible</p>
                       </div>
                       <p style={{fontSize:"36px",fontWeight:"800",color:weekScore>=70?T.rose:T.dim,letterSpacing:"-1px",fontFamily:SERIF}}>{weekScore}%</p>
