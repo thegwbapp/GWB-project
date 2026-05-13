@@ -16,11 +16,11 @@ const T = {
 };
 
 const MOODS = [
-  { emoji: "✨", label: "Thriving", msg: "She is absolutely glowing today." },
-  { emoji: "🌸", label: "Good", msg: "She's in a good place. Keep it going." },
-  { emoji: "☁️", label: "Okay", msg: "Okay is enough. She showed up." },
-  { emoji: "🌧", label: "Low", msg: "Even on low days, she's still her." },
-  { emoji: "🔥", label: "Stressed", msg: "She will get through this. Breathe." },
+  { emoji: "✨", label: "Thriving", msg: "You are absolutely glowing today." },
+  { emoji: "🌸", label: "Good", msg: "You in a good place. Keep it going." },
+  { emoji: "☁️", label: "Okay", msg: "Okay is enough. You showed up." },
+  { emoji: "🌧", label: "Low", msg: "Even on low days, you're still her." },
+  { emoji: "🔥", label: "Stressed", msg: "You will get through this. Breathe." },
 ];
 
 const POST_TYPES = [
@@ -84,14 +84,14 @@ const CSS = `
 `;
 
 const NUDGE_ANGLES = [
-  "Give her a bold direct challenge — push her to act right now.",
-  "Give her something soft and affirming — remind her of her worth.",
-  "Give her a perspective shift — reframe how she sees today.",
-  "Give her a reality check — speak to what she might be avoiding.",
-  "Give her something poetic and inspiring — speak to her soul.",
-  "Give her a practical spark — one specific thing she can do right now.",
-  "Give her a reminder of the bigger picture — why this daily work matters.",
-  "Celebrate where she is right now — even if it is not perfect.",
+  "Give yourself a bold direct challenge — push yourself to act right now.",
+  "Give yourself something soft and affirming — remind yourself of your worth.",
+  "Give yourself a perspective shift — reframe how you sees today.",
+  "Give yourself a reality check — speak to what you might be avoiding.",
+  "Give yourself something poetic and inspiring — speak to your soul.",
+  "Give yourself a practical spark — one specific thing you can do right now.",
+  "Give yourself a reminder of the bigger picture — why this daily work matters.",
+  "Celebrate where you is right now — even if it is not perfect.",
 ];
 
 function Avatar({ icon, color, size=40 }) {
@@ -650,8 +650,8 @@ export default function App() {
             <CircleProgress pct={pct} color={T.rose}/>
             <div>
               <p style={{fontSize:"20px",fontWeight:"800",color:T.text,marginBottom:"3px",fontFamily:SERIF}}>Her Progress</p>
-              <p style={{fontSize:"13px",color:T.muted,marginBottom:"5px"}}>She's completed {completedCount} of {goals.length}</p>
-              <p style={{fontSize:"12px",color:T.rose,fontStyle:"italic",lineHeight:1.4}}>{pct===100?"She showed up. Fully.":pct>=50?"She is in motion. Keep going.":"Her day is waiting for her."}</p>
+              <p style={{fontSize:"13px",color:T.muted,marginBottom:"5px"}}>You have completed {completedCount} of {goals.length}</p>
+              <p style={{fontSize:"12px",color:T.rose,fontStyle:"italic",lineHeight:1.4}}>{pct===100?"You showed up. Fully.":pct>=50?"You're is in motion. Keep going.":"Your day is waiting for you."}</p>
             </div>
           </div>}
 
@@ -886,7 +886,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <textarea value={postContent} onChange={e=>setPostContent(e.target.value)} placeholder="Share her thoughts..." rows={3}
+              <textarea value={postContent} onChange={e=>setPostContent(e.target.value)} placeholder="Share your thoughts..." rows={3}
                 style={{width:"100%",padding:"12px 14px",background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:"15px",borderRadius:"12px",outline:"none",fontStyle:"italic",lineHeight:1.6,marginBottom:"10px"}}/>
               {postImagePreview&&<div style={{position:"relative",marginBottom:"10px"}}>
                 <img src={postImagePreview} alt="preview" style={{width:"100%",borderRadius:"10px",maxHeight:"200px",objectFit:"cover"}}/>
@@ -944,7 +944,7 @@ export default function App() {
 
           {wallTab==="feed"&&<div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
             {posts.length===0?(
-              <div style={{textAlign:"center",padding:"40px 0",color:T.dim,fontSize:"15px",fontStyle:"italic"}}>The circle is quiet. She goes first.</div>
+              <div style={{textAlign:"center",padding:"40px 0",color:T.dim,fontSize:"15px",fontStyle:"italic"}}>The circle is quiet. You go first.</div>
             ):posts.map(post=>{
               const postAes=post.aesthetic?AESTHETICS[post.aesthetic]:null;
               const ptObj=POST_TYPES.find(pt=>pt.id===post.post_type);
@@ -1162,7 +1162,7 @@ export default function App() {
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:T.card,borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:50,boxShadow:"0 -4px 20px rgba(196,132,138,0.08)"}}>
         {[
           {v:"today", icon:"◈", label:"HOME"},
-          {v:"reset", icon:"✦", label:"RESET"},
+          {v:"reset", icon:"✦", label:"ROUTINE"},
           {v:"wall",  icon:"◎", label:"CIRCLE"},
           {v:"goals", icon:"✶", label:"GOALS"},
           {v:"cycle", icon:"☽", label:"CYCLE"},
@@ -1178,8 +1178,8 @@ export default function App() {
 
       {celebrating&&<div className="fi" style={{position:"fixed",inset:0,background:"rgba(253,248,248,0.97)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:100}}>
         <p style={{fontSize:"52px",marginBottom:"16px",color:T.rose}}>{aesObj?.icon||"○"}</p>
-        <h1 style={{fontSize:"32px",fontWeight:"800",color:T.text,letterSpacing:"-1px",marginBottom:"10px",fontFamily:SERIF}}>She Showed Up.</h1>
-        <p style={{fontSize:"12px",letterSpacing:"4px",color:T.rose,fontFamily:SANS}}>SHE IS BECOMING HER. EVERY SINGLE DAY.</p>
+        <h1 style={{fontSize:"32px",fontWeight:"800",color:T.text,letterSpacing:"-1px",marginBottom:"10px",fontFamily:SERIF}}>You Showed Up.</h1>
+        <p style={{fontSize:"12px",letterSpacing:"4px",color:T.rose,fontFamily:SANS}}>YOU ARE BECOMING HER. EVERY SINGLE DAY.</p>
       </div>}
     </div>
   );
