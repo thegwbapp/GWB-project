@@ -10,16 +10,18 @@ const SERIF = "Georgia,'Times New Roman',serif";
 const SANS = "'Helvetica Neue', Arial, sans-serif";
 
 const T = {
-  bg: "#fdf8f8",
-  card: "#ffffff",
-  border: "#f0e0e0",
-  text: "#2d1f22",
-  muted: "#9a7070",
-  dim: "#c4a8a8",
-  rose: "#c4848a",
-  roseLight: "#f5d5d8",
-  roseDark: "#a06068",
+  bg: "#fdf8f8", card: "#ffffff", border: "#f0e0e0",
+  text: "#2d1f22", muted: "#9a7070", dim: "#c4a8a8",
+  rose: "#c4848a", roseLight: "#f5d5d8", roseDark: "#a06068",
 };
+
+const MOODS = [
+  { emoji: "✨", label: "Thriving", msg: "She is absolutely glowing today." },
+  { emoji: "🌸", label: "Good", msg: "She's in a good place. Keep it going." },
+  { emoji: "☁️", label: "Okay", msg: "Okay is enough. She showed up." },
+  { emoji: "🌧", label: "Low", msg: "Even on low days, she's still her." },
+  { emoji: "🔥", label: "Stressed", msg: "She will get through this. Breathe." },
+];
 
 const POST_TYPES = [
   { id:"win", label:"\uD83C\uDFC6 Sharing a Win", color:"#c4848a" },
@@ -27,6 +29,35 @@ const POST_TYPES = [
   { id:"question", label:"\u2753 Asking the Circle", color:"#c4a882" },
   { id:"encouragement", label:"\uD83D\uDCE3 Encouragement", color:"#a06068" },
 ];
+
+const RESET_SECTIONS = {
+  morning: {
+    label: "Morning Reset", icon: "☀️",
+    tasks: ["Make my bed","Open blinds & let light in","Bathroom quick wipe-down","Start one load of laundry","Empty dishwasher","Refill my water bottle","10-minute tidy"],
+  },
+  afterWorkout: {
+    label: "After Workout Reset", icon: "🚿",
+    tasks: ["Put gym clothes in laundry","Wipe vanity sink area","Restock toiletries if low","Quick mirror wipe","Skincare reset"],
+  },
+  closing: {
+    label: "Closing Duties", icon: "🌙",
+    tasks: ["Dishes done or soaking","Counters wiped","Trash checked","Lights & cozy ambiance set","Alarm & tomorrow prep","Phone on charger","Night skincare"],
+  },
+};
+
+const HOUSE_FOCUS = {
+  Monday: { label:"Kitchen Glow-Up", icon:"🍽️", tasks:["Deep clean counters","Wipe appliances","Toss expired fridge items","Sweep + mop kitchen"] },
+  Tuesday: { label:"Bathroom Reset", icon:"🛁", tasks:["Clean toilet","Wipe mirrors","Scrub sink + tub","Replace towels"] },
+  Wednesday: { label:"Bedroom Luxe Day", icon:"🛏️", tasks:["Wash my bedding","Dust surfaces","Organize my vanity","Floor pickup/reset"] },
+  Thursday: { label:"Living Room Refresh", icon:"🛋️", tasks:["Fluff pillows + blankets","Dust TV/console","Vacuum rug","Organize decor/clutter"] },
+  Friday: { label:"Beauty + Self Care", icon:"💄", tasks:["Clean my makeup brushes","Organize my products","Nail/self-care time","Trash purge from bags"] },
+  Saturday: { label:"Catch Up Day", icon:"🛒", tasks:["Finish laundry","Grocery reset","Meal prep/light prep","Restock essentials"] },
+  Sunday: { label:"Soft Reset", icon:"🕯️", tasks:["Fresh sheets if needed","Plan my outfits/gym fits","Reset my planner/goals","Relaxation evening"] },
+};
+
+const EXTRAS = ["7k-10k steps","Protein goal hit","Vitamins taken","Water goal reached","Journal/check-in moment","No doom scrolling"];
+
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
 const CSS = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -108,6 +139,8 @@ export default function App() {
   const [aiMsg, setAiMsg] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
   const [quote] = useState(randomQuote());
+  const [mood, setMood] = useState(null);
+  // Wall
   const [posts, setPosts] = useState([]);
   const [wallTab, setWallTab] = useState("feed");
   const [activityFeed, setActivityFeed] = useState([]);
@@ -125,19 +158,40 @@ export default function App() {
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [challengeResponse, setChallengeResponse] = useState("");
   const [challengeSubmitted, setChallengeSubmitted] = useState(false);
+  // Cycle
   const [cycleStartDate, setCycleStartDate] = useState(null);
   const [cycleInput, setCycleInput] = useState("");
   const [cycleSaved, setCycleSaved] = useState(false);
+  // Vision
   const [visionPosts, setVisionPosts] = useState([]);
   const [visionImage, setVisionImage] = useState(null);
   const [visionImagePreview, setVisionImagePreview] = useState(null);
   const [visionCaption, setVisionCaption] = useState("");
   const [uploadingVision, setUploadingVision] = useState(false);
+  // Reset
+  const [resetChecked, setResetChecked] = useState({});
+  const [openResetSection, setOpenResetSection] = useState("morning");
 
   const aesObj = aesthetic ? AESTHETICS[aesthetic] : null;
   const rose = T.rose;
+  const todayDay = DAYS[new Date().getDay()];
+  const todayFocus = HOUSE_FOCUS[todayDay] || HOUSE_FOCUS["Monday"];
+
+  const toggleReset = (id) => setResetChecked(p => ({...p, [id]: !p[id]}));
 
   useEffect(() => {
+    // OneSignal
+    const script = document.createElement("script");
+    script.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+    script.defer = true;
+    document.head.appendChild(script);
+    script.onload = () => {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({ appId: "605542f2-e96a-4614-bf47-65d182f45c72", allowLocalhostAsSecureOrigin: true });
+      });
+    };
+
     const t = setTimeout(async () => {
       try {
         const saved = localStorage.getItem("gwb_user_id");
@@ -146,14 +200,8 @@ export default function App() {
           const data = recs && recs[0] ? recs[0] : null;
           if (data) {
             setUser(data);
-            if (data.quiz_done && data.aesthetic) {
-              setAesthetic(data.aesthetic);
-              setScreen("app");
-              loadUserData(data);
-              return;
-            }
-            setScreen("quiz");
-            return;
+            if (data.quiz_done && data.aesthetic) { setAesthetic(data.aesthetic); setScreen("app"); loadUserData(data); return; }
+            setScreen("quiz"); return;
           }
         }
       } catch {}
@@ -164,10 +212,7 @@ export default function App() {
 
   const loadUserData = useCallback(async (u) => {
     setDataLoading(true);
-    const [g, c] = await Promise.all([
-      dbGet("goals", "user_id=eq." + u.id),
-      dbGet("checkins", "user_id=eq." + u.id),
-    ]);
+    const [g, c] = await Promise.all([dbGet("goals", "user_id=eq." + u.id), dbGet("checkins", "user_id=eq." + u.id)]);
     setGoals(g || []);
     const clist = c || [];
     setCheckins(clist);
@@ -188,14 +233,13 @@ export default function App() {
   };
 
   const getCyclePhase = (startDate) => {
-    const start = new Date(startDate);
-    const now = new Date();
+    const start = new Date(startDate), now = new Date();
     const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
     const day = (diff % 28) + 1;
     if (day <= 5) return { phase:"Menstrual", days:"Days 1-5", day, icon:"New Moon", color:"#c4848a", body:"Your body is shedding and renewing. Estrogen and progesterone are at their lowest. You may feel introspective, tired, and sensitive. This is intentional rest, not weakness.", energy:"Low to Moderate", workout:"Gentle yoga, walking, stretching. Honor the rest.", foods:"Iron-rich foods: leafy greens, lentils, dark chocolate. Warm nourishing meals.", affirmation:"Rest is productive. My body is doing sacred work." };
-    if (day <= 13) return { phase:"Follicular", days:"Days 6-13", day, icon:"Waxing Moon", color:"#a06068", body:"Estrogen is rising. Your brain is sharp, your mood is lifting, and your energy is building. This is your fresh start energy. New ideas, new commitments, new momentum.", energy:"Rising", workout:"Strength training, cardio, trying something new. You have the energy for it.", foods:"Fermented foods, lean proteins, fresh vegetables. Your metabolism is ready.", affirmation:"I am rising. My potential is expanding with every day." };
-    if (day <= 16) return { phase:"Ovulatory", days:"Days 14-16", day, icon:"Full Moon", color:"#c4848a", body:"Peak estrogen and testosterone. You are magnetic right now. Communication is easiest, confidence is highest, and your body is at its strongest. Use this window.", energy:"Peak", workout:"High intensity, group classes, personal records. Your body can handle it all.", foods:"Light, energizing foods. Raw vegetables, smoothies, fiber-rich meals.", affirmation:"I am at my most powerful. I move through the world with ease and confidence." };
-    return { phase:"Luteal", days:"Days 17-28", day, icon:"Waning Moon", color:"#9ab0c4", body:"Progesterone rises then drops. You may crave comfort, feel more emotional, or want to slow down. This is not a flaw. This is your body asking for intentional care before the reset.", energy:"Declining", workout:"Moderate cardio, pilates, walks. Reduce intensity as you near day 28.", foods:"Magnesium-rich foods: dark chocolate, nuts, seeds. Complex carbs for mood stability.", affirmation:"I honor my need to slow down. Softness is my strength right now." };
+    if (day <= 13) return { phase:"Follicular", days:"Days 6-13", day, icon:"Waxing Moon", color:"#a06068", body:"Estrogen is rising. Your brain is sharp, your mood is lifting, and your energy is building. This is your fresh start energy.", energy:"Rising", workout:"Strength training, cardio, trying something new.", foods:"Fermented foods, lean proteins, fresh vegetables.", affirmation:"I am rising. My potential is expanding with every day." };
+    if (day <= 16) return { phase:"Ovulatory", days:"Days 14-16", day, icon:"Full Moon", color:"#c4848a", body:"Peak estrogen and testosterone. You are magnetic right now. Use this window.", energy:"Peak", workout:"High intensity, group classes, personal records.", foods:"Light, energizing foods. Raw vegetables, smoothies.", affirmation:"I am at my most powerful. I move through the world with ease." };
+    return { phase:"Luteal", days:"Days 17-28", day, icon:"Waning Moon", color:"#9ab0c4", body:"Progesterone rises then drops. This is your body asking for intentional care before the reset.", energy:"Declining", workout:"Moderate cardio, pilates, walks.", foods:"Magnesium-rich foods: dark chocolate, nuts, seeds.", affirmation:"I honor my need to slow down. Softness is my strength." };
   };
 
   const saveCycleDate = async () => {
@@ -272,30 +316,23 @@ export default function App() {
   const loadDailyChallenge = async () => {
     const todayStr = today();
     const cached = localStorage.getItem("gwb_challenge_" + todayStr);
-    if (cached) {
-      setDailyChallenge(JSON.parse(cached));
-      if (localStorage.getItem("gwb_challenge_responded_" + todayStr)) setChallengeSubmitted(true);
-      return;
-    }
+    if (cached) { setDailyChallenge(JSON.parse(cached)); if (localStorage.getItem("gwb_challenge_responded_" + todayStr)) setChallengeSubmitted(true); return; }
     setChallengeLoading(true);
     try {
       const dayOfWeek = new Date().toLocaleDateString("en-US", {weekday:"long"});
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514", max_tokens:200,
+        body:JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
           system:"You are the voice of Be Her Daily — The Grown Woman Blueprint. Create a single daily community challenge prompt for women focused on intentional living and growth. Make it thoughtful, specific, and inspiring. Return ONLY the question itself — under 20 words, no quotes.",
           messages:[{role:"user",content:`Today is ${dayOfWeek}. Generate today's community challenge prompt.`}]
         })
       });
       const data = await res.json();
-      const prompt = data.content?.map(b=>b.text||"").join("").trim() || "What is one thing she is choosing to prioritize for herself today?";
+      const prompt = data.content?.map(b=>b.text||"").join("").trim() || "What is one thing you are choosing to prioritize for yourself today?";
       const challenge = {prompt, date:todayStr};
       setDailyChallenge(challenge);
       localStorage.setItem("gwb_challenge_" + todayStr, JSON.stringify(challenge));
-    } catch {
-      setDailyChallenge({prompt:"What is one thing she is choosing to prioritize for herself today?", date:todayStr});
-    }
+    } catch { setDailyChallenge({prompt:"What is one thing you are choosing to prioritize for yourself today?", date:todayStr}); }
     setChallengeLoading(false);
   };
 
@@ -449,11 +486,12 @@ export default function App() {
         })
       });
       const data = await res.json();
-      setAiMsg(data.content?.map(b=>b.text||"").join("")||"The woman she is becoming is watching. Keep going.");
-    } catch { setAiMsg("The woman she is becoming is watching. Keep going."); }
+      setAiMsg(data.content?.map(b=>b.text||"").join("")||"The woman you are becoming is watching. Keep going.");
+    } catch { setAiMsg("The woman you are becoming is watching. Keep going."); }
     setLoadingAI(false);
   };
 
+  // ── SPLASH ──
   if (screen==="splash") return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:SERIF}}>
       <style>{CSS}</style>
@@ -466,6 +504,7 @@ export default function App() {
     </div>
   );
 
+  // ── SETUP ──
   if (screen==="setup") return (
     <div style={{minHeight:"100vh",background:T.bg,fontFamily:SERIF,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}>
       <style>{CSS}</style>
@@ -501,6 +540,7 @@ export default function App() {
     </div>
   );
 
+  // ── QUIZ ──
   if (screen==="quiz") {
     const q = QUESTIONS[quizStep];
     const progress = (quizStep/QUESTIONS.length)*100;
@@ -536,6 +576,7 @@ export default function App() {
     );
   }
 
+  // ── RESULT ──
   if (screen==="result"&&aesObj) return (
     <div style={{minHeight:"100vh",background:T.bg,fontFamily:SERIF,color:T.text,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 20px"}}>
       <style>{CSS}</style>
@@ -549,7 +590,7 @@ export default function App() {
           <p style={{fontSize:"16px",lineHeight:1.85,color:T.muted,fontStyle:"italic"}}>{aesObj.description}</p>
         </div>
         <div className="fu5" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"16px",padding:"20px",marginBottom:"22px",textAlign:"left",boxShadow:"0 2px 16px rgba(196,132,138,0.08)"}}>
-          <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>HER COMMITMENTS</p>
+          <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>MY COMMITMENTS</p>
           {aesObj.goals.map((g,i) => (
             <div key={i} style={{display:"flex",alignItems:"center",gap:"12px",padding:"11px 0",borderTop:i>0?`1px solid ${T.border}`:"none"}}>
               <span style={{color:T.rose,fontSize:"13px",flexShrink:0}}>{aesObj.icon}</span>
@@ -564,12 +605,14 @@ export default function App() {
     </div>
   );
 
+  // ── MAIN APP ──
   return (
     <div style={{minHeight:"100vh",background:T.bg,fontFamily:SERIF,color:T.text,paddingBottom:"90px"}}>
       <style>{CSS}</style>
       <div style={{height:"3px",background:`linear-gradient(90deg,${T.roseLight},${T.rose},${T.roseLight})`}}/>
       <div style={{maxWidth:"480px",margin:"0 auto",padding:"0 18px"}}>
 
+        {/* Header */}
         <div style={{padding:"24px 0 14px"}}>
           <p style={{fontSize:"9px",letterSpacing:"5px",color:T.dim,marginBottom:"4px",fontFamily:SANS}}>THE GROWN WOMAN BLUEPRINT</p>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -583,10 +626,12 @@ export default function App() {
           </div>
         </div>
 
+        {/* Quote */}
         <div style={{padding:"12px 16px",background:T.card,borderRadius:"14px",marginBottom:"12px",borderLeft:`3px solid ${T.rose}`,boxShadow:"0 2px 12px rgba(196,132,138,0.08)"}}>
           <p style={{fontStyle:"italic",color:T.muted,fontSize:"14px",lineHeight:1.5}}>{quote}</p>
         </div>
 
+        {/* Aesthetic badge */}
         {aesObj&&<div style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",background:T.card,border:`1px solid ${T.border}`,borderRadius:"12px",marginBottom:"12px",boxShadow:"0 2px 8px rgba(196,132,138,0.06)"}}>
           <div style={{width:"36px",height:"36px",borderRadius:"50%",background:T.roseLight,display:"flex",alignItems:"center",justifyContent:"center"}}>
             <span style={{fontSize:"16px",color:T.rose}}>{aesObj.icon}</span>
@@ -598,121 +643,192 @@ export default function App() {
           <p style={{fontSize:"11px",color:T.dim,fontStyle:"italic"}}>@{user?.display_name}</p>
         </div>}
 
-        {view==="today"&&goals.length>0&&<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",display:"flex",alignItems:"center",gap:"18px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-          <CircleProgress pct={pct} color={T.rose}/>
-          <div>
-            <p style={{fontSize:"20px",fontWeight:"800",color:T.text,marginBottom:"3px",fontFamily:SERIF}}>Her Progress</p>
-            <p style={{fontSize:"13px",color:T.muted,marginBottom:"5px"}}>She's completed {completedCount} of {goals.length}</p>
-            <p style={{fontSize:"12px",color:T.rose,fontStyle:"italic",lineHeight:1.4}}>{pct===100?"She showed up. Fully.":pct>=50?"She is in motion. Keep going.":"Her day is waiting for her."}</p>
-          </div>
-        </div>}
+        {/* ── TODAY ── */}
+        {view==="today"&&<div>
+          {/* Progress ring */}
+          {goals.length>0&&<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",display:"flex",alignItems:"center",gap:"18px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
+            <CircleProgress pct={pct} color={T.rose}/>
+            <div>
+              <p style={{fontSize:"20px",fontWeight:"800",color:T.text,marginBottom:"3px",fontFamily:SERIF}}>Her Progress</p>
+              <p style={{fontSize:"13px",color:T.muted,marginBottom:"5px"}}>She's completed {completedCount} of {goals.length}</p>
+              <p style={{fontSize:"12px",color:T.rose,fontStyle:"italic",lineHeight:1.4}}>{pct===100?"She showed up. Fully.":pct>=50?"She is in motion. Keep going.":"Her day is waiting for her."}</p>
+            </div>
+          </div>}
 
-        {view==="today"&&goals.length>0&&<div style={{marginBottom:"12px"}}>
-          <button onClick={getAINudge} disabled={loadingAI} style={{width:"100%",padding:"13px",background:T.rose,border:"none",color:"#fff",fontSize:"11px",letterSpacing:"3px",borderRadius:"12px",opacity:loadingAI?0.7:1,fontFamily:SANS,fontWeight:"600",boxShadow:"0 4px 14px rgba(196,132,138,0.25)"}}>
-            {loadingAI?"· · ·":"✦  HER DAILY WORD"}
-          </button>
-          {aiMsg&&<div className="fi" style={{marginTop:"10px",padding:"16px 18px",background:T.card,border:`1px solid ${T.border}`,borderLeft:`3px solid ${T.rose}`,borderRadius:"0 12px 12px 0",boxShadow:"0 2px 12px rgba(196,132,138,0.08)"}}>
-            <p style={{fontSize:"9px",letterSpacing:"3px",color:T.rose,marginBottom:"8px",fontFamily:SANS}}>HER DAILY WORD</p>
-            <p style={{fontSize:"15px",lineHeight:1.7,color:T.muted,fontStyle:"italic"}}>{aiMsg}</p>
+          {/* Mood Tracker */}
+          <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"16px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
+            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"14px",fontFamily:SANS}}>HOW IS SHE FEELING?</p>
+            <div style={{display:"flex",justifyContent:"space-between",gap:"6px"}}>
+              {MOODS.map(m => (
+                <button key={m.label} onClick={()=>setMood(mood===m.label?null:m.label)}
+                  style={{flex:1,padding:"10px 4px",background:mood===m.label?T.roseLight:T.bg,border:`1.5px solid ${mood===m.label?T.rose:T.border}`,borderRadius:"12px",display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",cursor:"pointer",transition:"all 0.2s"}}>
+                  <span style={{fontSize:"20px"}}>{m.emoji}</span>
+                  <span style={{fontSize:"8px",color:mood===m.label?T.rose:T.muted,fontFamily:SANS,letterSpacing:"0.5px",fontWeight:mood===m.label?"700":"400"}}>{m.label}</span>
+                </button>
+              ))}
+            </div>
+            {mood&&<p style={{textAlign:"center",marginTop:"12px",fontSize:"13px",color:T.rose,fontStyle:"italic"}}>{MOODS.find(m=>m.label===mood)?.msg}</p>}
+          </div>
+
+          {/* Her Daily Word */}
+          {goals.length>0&&<div style={{marginBottom:"12px"}}>
+            <button onClick={getAINudge} disabled={loadingAI} style={{width:"100%",padding:"13px",background:T.rose,border:"none",color:"#fff",fontSize:"11px",letterSpacing:"3px",borderRadius:"12px",opacity:loadingAI?0.7:1,fontFamily:SANS,fontWeight:"600",boxShadow:"0 4px 14px rgba(196,132,138,0.25)"}}>
+              {loadingAI?"· · ·":"✦  HER DAILY WORD"}
+            </button>
+            {aiMsg&&<div className="fi" style={{marginTop:"10px",padding:"16px 18px",background:T.card,border:`1px solid ${T.border}`,borderLeft:`3px solid ${T.rose}`,borderRadius:"0 12px 12px 0",boxShadow:"0 2px 12px rgba(196,132,138,0.08)"}}>
+              <p style={{fontSize:"9px",letterSpacing:"3px",color:T.rose,marginBottom:"8px",fontFamily:SANS}}>HER DAILY WORD</p>
+              <p style={{fontSize:"15px",lineHeight:1.7,color:T.muted,fontStyle:"italic"}}>{aiMsg}</p>
+            </div>}
+          </div>}
+
+          {dataLoading&&<div style={{textAlign:"center",padding:"50px 0",color:T.dim,letterSpacing:"4px",fontSize:"11px",fontFamily:SANS}}>She's on her way...</div>}
+
+          {/* Her Commitments */}
+          {!dataLoading&&<div>
+            {goals.length===0?(
+              <div style={{textAlign:"center",padding:"40px 0",color:T.dim}}>
+                <p style={{fontSize:"26px",marginBottom:"12px",color:T.rose,opacity:.4}}>○</p>
+                <p style={{fontSize:"15px",fontStyle:"italic",lineHeight:1.8,color:T.muted}}>I haven't set my commitments yet.<br/>Head to Goals to add some.</p>
+              </div>
+            ):(
+              <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
+                <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>MY COMMITMENTS</p>
+                {goals.map((goal,i) => {
+                  const done = checkedIds.has(goal.id);
+                  return (
+                    <button key={goal.id} onClick={()=>toggleCheckin(goal)}
+                      style={{display:"flex",alignItems:"center",gap:"14px",background:done?T.roseLight:"none",border:done?`1px solid ${T.rose}`:"none",borderTop:i>0&&!done?`1px solid ${T.border}`:"none",borderRadius:done?"12px":"0",padding:"13px",textAlign:"left",width:"100%",marginBottom:done?"6px":"0",cursor:"pointer",transition:"all 0.2s"}}>
+                      <div style={{width:"22px",height:"22px",flexShrink:0,borderRadius:"50%",border:`2px solid ${done?T.rose:T.dim}`,background:done?T.rose:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.3s"}}>
+                        {done&&<span style={{color:"#fff",fontSize:"11px",fontWeight:"bold"}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:"15px",color:done?T.roseDark:T.text,textDecoration:done?"line-through":"none",fontStyle:"italic",lineHeight:1.4,transition:"all 0.3s",flex:1}}>{goal.goal_text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Her Week */}
+            {goals.length>0&&<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
+              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>HER WEEK</p>
+              {(()=>{
+                const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+                const now=new Date();
+                const startOfWeek=new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
+                const todayKey=today();
+                const weekDays=Array.from({length:7},(_,i)=>{
+                  const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
+                  const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+                  const dayCheckins=checkins.filter(c=>c.date===key);
+                  const done=dayCheckins.length; const total=goals.length;
+                  const dayPct=total?Math.round(done/total*100):0;
+                  return {label:dayNames[i],key,done,total,pct:dayPct,isToday:key===todayKey,isFuture:d>now};
+                });
+                const totalPossible=goals.length*7;
+                const totalDone=weekDays.reduce((s,d)=>s+d.done,0);
+                const weekScore=totalPossible?Math.round(totalDone/totalPossible*100):0;
+                return (
+                  <div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"14px",gap:"4px"}}>
+                      {weekDays.map(day=>(
+                        <div key={day.key} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",flex:1}}>
+                          <div style={{width:"100%",height:"56px",background:T.bg,border:`1px solid ${T.border}`,borderRadius:"6px",overflow:"hidden",display:"flex",alignItems:"flex-end"}}>
+                            <div style={{width:"100%",height:day.pct+"%",background:day.isFuture?"transparent":day.isToday?T.rose:day.pct===100?T.rose:T.roseLight,borderRadius:"6px",transition:"height 0.5s ease",minHeight:day.done>0?"4px":"0"}}/>
+                          </div>
+                          <p style={{fontSize:"8px",letterSpacing:"1px",color:day.isToday?T.rose:T.dim,fontFamily:SANS}}>{day.label.substring(0,1)}</p>
+                          <p style={{fontSize:"8px",color:day.pct===100?T.rose:T.dim,fontFamily:SANS}}>{day.done}/{day.total}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{borderTop:`1px solid ${T.border}`,paddingTop:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div>
+                        <p style={{fontSize:"9px",letterSpacing:"3px",color:T.dim,marginBottom:"2px",fontFamily:SANS}}>HER SCORE</p>
+                        <p style={{fontSize:"11px",color:T.muted,fontStyle:"italic"}}>{totalDone} of {totalPossible} possible</p>
+                      </div>
+                      <p style={{fontSize:"36px",fontWeight:"800",color:weekScore>=70?T.rose:T.dim,letterSpacing:"-1px",fontFamily:SERIF}}>{weekScore}%</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>}
           </div>}
         </div>}
 
-        {dataLoading&&<div style={{textAlign:"center",padding:"50px 0",color:T.dim,letterSpacing:"4px",fontSize:"11px",fontFamily:SANS}}>She's on her way...</div>}
+        {/* ── RESET TAB ── */}
+        {view==="reset"&&<div>
+          {/* Today's focus */}
+          <div style={{background:T.card,border:`2px solid ${T.rose}`,borderRadius:"20px",padding:"18px",marginBottom:"14px",boxShadow:"0 2px 16px rgba(196,132,138,0.1)"}}>
+            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.rose,marginBottom:"4px",fontFamily:SANS}}>✦ TODAY'S FOCUS</p>
+            <p style={{fontSize:"20px",fontWeight:"800",color:T.text,marginBottom:"2px",fontFamily:SERIF}}>{todayDay}</p>
+            <p style={{fontSize:"13px",color:T.rose,fontStyle:"italic",marginBottom:"14px"}}>{todayFocus.icon} {todayFocus.label}</p>
+            {todayFocus.tasks.map((task,i) => {
+              const id = `focus-${i}`;
+              const done = resetChecked[id];
+              return (
+                <button key={i} onClick={()=>toggleReset(id)}
+                  style={{display:"flex",alignItems:"center",gap:"12px",background:"none",border:"none",borderTop:i>0?`1px solid ${T.border}`:"none",padding:"11px 0",width:"100%",textAlign:"left",cursor:"pointer"}}>
+                  <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`2px solid ${done?T.rose:T.dim}`,background:done?T.rose:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {done&&<span style={{color:"#fff",fontSize:"10px",fontWeight:"bold"}}>✓</span>}
+                  </div>
+                  <span style={{fontSize:"14px",color:done?T.dim:T.text,textDecoration:done?"line-through":"none",fontStyle:"italic"}}>{task}</span>
+                </button>
+              );
+            })}
+          </div>
 
-        {!dataLoading&&view==="today"&&<div>
-          {goals.length===0?(
-            <div style={{textAlign:"center",padding:"40px 0",color:T.dim}}>
-              <p style={{fontSize:"26px",marginBottom:"12px",color:T.rose,opacity:.4}}>○</p>
-              <p style={{fontSize:"15px",fontStyle:"italic",lineHeight:1.8,color:T.muted}}>She hasn't set her commitments yet.<br/>Head to Goals to add some.</p>
+          {/* Reset sections */}
+          {Object.entries(RESET_SECTIONS).map(([key,section]) => (
+            <div key={key} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",marginBottom:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(196,132,138,0.07)"}}>
+              <button onClick={()=>setOpenResetSection(openResetSection===key?null:key)}
+                style={{width:"100%",padding:"16px 18px",background:"none",border:"none",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                  <span style={{fontSize:"18px"}}>{section.icon}</span>
+                  <p style={{fontSize:"15px",fontWeight:"700",color:T.text,fontFamily:SERIF}}>{section.label}</p>
+                </div>
+                <span style={{color:T.rose,fontSize:"12px"}}>{openResetSection===key?"▲":"▼"}</span>
+              </button>
+              {openResetSection===key&&<div style={{padding:"0 18px 16px"}}>
+                {section.tasks.map((task,i) => {
+                  const id = `${key}-${i}`;
+                  const done = resetChecked[id];
+                  return (
+                    <button key={i} onClick={()=>toggleReset(id)}
+                      style={{display:"flex",alignItems:"center",gap:"12px",background:"none",border:"none",borderTop:i>0?`1px solid ${T.border}`:"none",padding:"11px 0",width:"100%",textAlign:"left",cursor:"pointer"}}>
+                      <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`2px solid ${done?T.rose:T.dim}`,background:done?T.rose:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        {done&&<span style={{color:"#fff",fontSize:"10px",fontWeight:"bold"}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:"14px",color:done?T.dim:T.text,textDecoration:done?"line-through":"none",fontStyle:"italic"}}>{task}</span>
+                    </button>
+                  );
+                })}
+              </div>}
             </div>
-          ):(
-            <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>HER COMMITMENTS</p>
-              {goals.map((goal,i) => {
-                const done = checkedIds.has(goal.id);
+          ))}
+
+          {/* Extras */}
+          <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 12px rgba(196,132,138,0.07)"}}>
+            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.rose,marginBottom:"14px",fontFamily:SANS}}>✦ OPTIONAL EXTRAS</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+              {EXTRAS.map((task,i) => {
+                const id = `extra-${i}`;
+                const done = resetChecked[id];
                 return (
-                  <button key={goal.id} onClick={()=>toggleCheckin(goal)}
-                    style={{display:"flex",alignItems:"center",gap:"14px",background:"none",border:"none",borderTop:i>0?`1px solid ${T.border}`:"none",padding:"13px 0",textAlign:"left",width:"100%",cursor:"pointer"}}>
-                    <div style={{width:"22px",height:"22px",flexShrink:0,borderRadius:"50%",border:`2px solid ${done?T.rose:T.dim}`,background:done?T.rose:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.3s"}}>
-                      {done&&<span style={{color:"#fff",fontSize:"11px",fontWeight:"bold"}}>✓</span>}
-                    </div>
-                    <span style={{fontSize:"16px",color:done?T.dim:T.text,textDecoration:done?"line-through":"none",fontStyle:"italic",lineHeight:1.4,transition:"all 0.3s"}}>{goal.goal_text}</span>
+                  <button key={i} onClick={()=>toggleReset(id)}
+                    style={{padding:"10px 12px",background:done?T.roseLight:T.bg,border:`1px solid ${done?T.rose:T.border}`,borderRadius:"10px",display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",textAlign:"left"}}>
+                    <div style={{width:"14px",height:"14px",borderRadius:"3px",border:`2px solid ${done?T.rose:T.dim}`,background:done?T.rose:"transparent",flexShrink:0}}/>
+                    <span style={{fontSize:"12px",color:done?T.roseDark:T.muted,fontStyle:"italic"}}>{task}</span>
                   </button>
                 );
               })}
             </div>
-          )}
+          </div>
+
+          <div style={{textAlign:"center",padding:"8px 0 16px"}}>
+            <p style={{fontSize:"13px",color:T.rose,fontStyle:"italic",fontFamily:SERIF}}>"Progress, not perfection." ♡</p>
+          </div>
         </div>}
 
-        {!dataLoading&&view==="today"&&goals.length>0&&(
-          <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"18px",marginBottom:"12px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-            <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"16px",fontFamily:SANS}}>HER WEEK</p>
-            {(()=>{
-              const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-              const now=new Date();
-              const startOfWeek=new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
-              const todayKey=today();
-              const weekDays=Array.from({length:7},(_,i)=>{
-                const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
-                const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-                const dayCheckins=checkins.filter(c=>c.date===key);
-                const done=dayCheckins.length; const total=goals.length;
-                const dayPct=total?Math.round(done/total*100):0;
-                return {label:dayNames[i],key,done,total,pct:dayPct,isToday:key===todayKey,isFuture:d>now};
-              });
-              const totalPossible=goals.length*7;
-              const totalDone=weekDays.reduce((s,d)=>s+d.done,0);
-              const weekScore=totalPossible?Math.round(totalDone/totalPossible*100):0;
-              return (
-                <div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"14px",gap:"4px"}}>
-                    {weekDays.map(day=>(
-                      <div key={day.key} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",flex:1}}>
-                        <div style={{width:"100%",height:"56px",background:T.bg,border:`1px solid ${T.border}`,borderRadius:"6px",overflow:"hidden",display:"flex",alignItems:"flex-end"}}>
-                          <div style={{width:"100%",height:day.pct+"%",background:day.isFuture?"transparent":day.isToday?T.rose:day.pct===100?T.rose:T.roseLight,borderRadius:"6px",transition:"height 0.5s ease",minHeight:day.done>0?"4px":"0"}}/>
-                        </div>
-                        <p style={{fontSize:"8px",letterSpacing:"1px",color:day.isToday?T.rose:T.dim,fontFamily:SANS}}>{day.label.substring(0,1)}</p>
-                        <p style={{fontSize:"8px",color:day.pct===100?T.rose:T.dim,fontFamily:SANS}}>{day.done}/{day.total}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{borderTop:`1px solid ${T.border}`,paddingTop:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div>
-                      <p style={{fontSize:"9px",letterSpacing:"3px",color:T.dim,marginBottom:"2px",fontFamily:SANS}}>HER SCORE</p>
-                      <p style={{fontSize:"11px",color:T.muted,fontStyle:"italic"}}>{totalDone} of {totalPossible} possible</p>
-                    </div>
-                    <p style={{fontSize:"36px",fontWeight:"800",color:weekScore>=70?T.rose:T.dim,letterSpacing:"-1px",fontFamily:SERIF}}>{weekScore}%</p>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {!dataLoading&&view==="goals"&&<div>
-          <div style={{display:"flex",marginBottom:"12px"}}>
-            <input value={newGoal} onChange={e=>setNewGoal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addGoal()} placeholder="Add her commitment..."
-              style={{flex:1,padding:"13px 16px",background:T.card,border:`1px solid ${T.border}`,borderRight:"none",color:T.text,fontSize:"15px",borderRadius:"12px 0 0 12px",outline:"none",fontStyle:"italic",boxShadow:"0 2px 8px rgba(196,132,138,0.06)"}}/>
-            <button onClick={addGoal} style={{padding:"13px 18px",background:T.rose,border:"none",color:"#fff",fontSize:"20px",borderRadius:"0 12px 12px 0",boxShadow:"0 2px 8px rgba(196,132,138,0.2)"}}>+</button>
-          </div>
-          {goals.length===0
-            ?<div style={{textAlign:"center",padding:"36px 0",color:T.dim,fontSize:"15px",fontStyle:"italic"}}>What does she refuse to compromise on?</div>
-            :<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",overflow:"hidden",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-              {goals.map((goal,i) => (
-                <div key={goal.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px",borderTop:i>0?`1px solid ${T.border}`:"none"}}>
-                  <span style={{color:T.rose,fontSize:"13px",flexShrink:0}}>{aesObj?.icon||"○"}</span>
-                  <span style={{flex:1,fontSize:"15px",color:T.text,lineHeight:1.4,fontStyle:"italic"}}>{goal.goal_text}</span>
-                  <button onClick={()=>removeGoal(goal.id)} style={{background:"none",border:"none",color:T.dim,fontSize:"18px",padding:"0 4px"}}>×</button>
-                </div>
-              ))}
-            </div>
-          }
-          <button onClick={()=>{setQuizStep(0);setQuizScores({clean:0,soft:0,corporate:0,wellness:0,luxury:0});setQuizKey(0);setScreen("quiz");}}
-            style={{width:"100%",marginTop:"14px",padding:"12px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:"11px",letterSpacing:"3px",borderRadius:"12px",fontFamily:SANS}}>
-            REDISCOVER HER AESTHETIC
-          </button>
-        </div>}
-
+        {/* ── CIRCLE ── */}
         {view==="wall"&&<div>
           <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"16px",padding:"14px 16px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 8px rgba(196,132,138,0.06)"}}>
             <div>
@@ -882,11 +998,8 @@ export default function App() {
                     </div>
                   </div>
                   <div style={{borderTop:`1px solid ${T.border}`}}>
-                    <button onClick={()=>{
-                      const opening=!commentsOpen;
-                      setExpandedComments(p=>({...p,[post.id]:opening}));
-                      if(opening&&!replies[post.id]) loadReplies(post.id);
-                    }} style={{width:"100%",padding:"10px 16px",background:"none",border:"none",color:T.muted,fontSize:"12px",letterSpacing:"1px",textAlign:"left",fontFamily:SANS}}>
+                    <button onClick={()=>{const opening=!commentsOpen;setExpandedComments(p=>({...p,[post.id]:opening}));if(opening&&!replies[post.id])loadReplies(post.id);}}
+                      style={{width:"100%",padding:"10px 16px",background:"none",border:"none",color:T.muted,fontSize:"12px",letterSpacing:"1px",textAlign:"left",fontFamily:SANS}}>
                       {commentsOpen?"▲ Hide comments":`▼ ${postReplies.length||"View"} comment${postReplies.length!==1?"s":""}`}
                     </button>
                     {commentsOpen&&<div style={{padding:"4px 16px 16px"}}>
@@ -906,8 +1019,7 @@ export default function App() {
                         <Avatar icon={aesObj?.icon||"○"} color={T.rose} size={32}/>
                         <div style={{flex:1,display:"flex"}}>
                           <input value={replyTexts[post.id]||""} onChange={e=>setReplyTexts(p=>({...p,[post.id]:e.target.value}))}
-                            onKeyDown={e=>e.key==="Enter"&&submitReply(post.id)}
-                            placeholder="She says..."
+                            onKeyDown={e=>e.key==="Enter"&&submitReply(post.id)} placeholder="She says..."
                             style={{flex:1,padding:"10px 14px",background:T.bg,border:`1px solid ${T.border}`,borderRight:"none",color:T.text,fontSize:"14px",borderRadius:"24px 0 0 24px",outline:"none",fontStyle:"italic"}}/>
                           <button onClick={()=>submitReply(post.id)} style={{padding:"10px 14px",background:T.rose,border:"none",color:"#fff",fontSize:"14px",borderRadius:"0 24px 24px 0"}}>→</button>
                         </div>
@@ -920,15 +1032,41 @@ export default function App() {
           </div>}
         </div>}
 
-        {!dataLoading&&view==="cycle"&&<div>
+        {/* ── GOALS ── */}
+        {view==="goals"&&<div>
+          <div style={{display:"flex",marginBottom:"12px"}}>
+            <input value={newGoal} onChange={e=>setNewGoal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addGoal()} placeholder="Add my commitment..."
+              style={{flex:1,padding:"13px 16px",background:T.card,border:`1px solid ${T.border}`,borderRight:"none",color:T.text,fontSize:"15px",borderRadius:"12px 0 0 12px",outline:"none",fontStyle:"italic",boxShadow:"0 2px 8px rgba(196,132,138,0.06)"}}/>
+            <button onClick={addGoal} style={{padding:"13px 18px",background:T.rose,border:"none",color:"#fff",fontSize:"20px",borderRadius:"0 12px 12px 0",boxShadow:"0 2px 8px rgba(196,132,138,0.2)"}}>+</button>
+          </div>
+          {goals.length===0
+            ?<div style={{textAlign:"center",padding:"36px 0",color:T.dim,fontSize:"15px",fontStyle:"italic"}}>What do I refuse to compromise on?</div>
+            :<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",overflow:"hidden",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
+              {goals.map((goal,i) => (
+                <div key={goal.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px",borderTop:i>0?`1px solid ${T.border}`:"none"}}>
+                  <span style={{color:T.rose,fontSize:"13px",flexShrink:0}}>{aesObj?.icon||"○"}</span>
+                  <span style={{flex:1,fontSize:"15px",color:T.text,lineHeight:1.4,fontStyle:"italic"}}>{goal.goal_text}</span>
+                  <button onClick={()=>removeGoal(goal.id)} style={{background:"none",border:"none",color:T.dim,fontSize:"18px",padding:"0 4px"}}>×</button>
+                </div>
+              ))}
+            </div>
+          }
+          <button onClick={()=>{setQuizStep(0);setQuizScores({clean:0,soft:0,corporate:0,wellness:0,luxury:0});setQuizKey(0);setScreen("quiz");}}
+            style={{width:"100%",marginTop:"14px",padding:"12px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:"11px",letterSpacing:"3px",borderRadius:"12px",fontFamily:SANS}}>
+            REDISCOVER HER AESTHETIC
+          </button>
+        </div>}
+
+        {/* ── CYCLE ── */}
+        {view==="cycle"&&<div>
           {!cycleSaved?(
             <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"24px",marginBottom:"14px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
-              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"8px",fontFamily:SANS}}>HER CYCLE</p>
-              <p style={{fontSize:"15px",color:T.muted,fontStyle:"italic",lineHeight:1.6,marginBottom:"20px"}}>Enter the first day of her last period and we will tell her exactly what her body needs right now.</p>
+              <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"8px",fontFamily:SANS}}>MY CYCLE</p>
+              <p style={{fontSize:"15px",color:T.muted,fontStyle:"italic",lineHeight:1.6,marginBottom:"20px"}}>Enter the first day of my last period and I'll tell you exactly what my body needs right now.</p>
               <input type="date" value={cycleInput} onChange={e=>setCycleInput(e.target.value)}
                 style={{width:"100%",padding:"13px 16px",background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:"16px",borderRadius:"12px",outline:"none",marginBottom:"12px"}}/>
               <button onClick={saveCycleDate} style={{width:"100%",padding:"14px",background:T.rose,border:"none",color:"#fff",fontSize:"11px",letterSpacing:"4px",fontWeight:"600",borderRadius:"12px",fontFamily:SANS,boxShadow:"0 4px 14px rgba(196,132,138,0.25)"}}>
-                REVEAL HER PHASE
+                REVEAL MY PHASE
               </button>
             </div>
           ):(()=>{
@@ -959,52 +1097,60 @@ export default function App() {
                 </div>
                 <button onClick={()=>{setCycleSaved(false);setCycleInput("");}}
                   style={{width:"100%",padding:"12px",background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:"11px",letterSpacing:"3px",borderRadius:"12px",fontFamily:SANS}}>
-                  UPDATE HER CYCLE
+                  UPDATE MY CYCLE
                 </button>
               </div>
             );
           })()}
         </div>}
 
-        {!dataLoading&&view==="vision"&&<div>
-          <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"6px",fontFamily:SANS}}>HER VISION</p>
-          <p style={{fontSize:"13px",color:T.muted,fontStyle:"italic",marginBottom:"16px",lineHeight:1.5}}>Her private sanctuary. A vision of everything she's becoming.</p>
+        {/* ── VISION — Pinterest style ── */}
+        {view==="vision"&&<div>
+          <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"6px",fontFamily:SANS}}>MY VISION</p>
+          <p style={{fontSize:"13px",color:T.muted,fontStyle:"italic",marginBottom:"16px",lineHeight:1.5}}>My private sanctuary. A vision of everything I'm becoming.</p>
+
+          {/* Upload */}
           <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:"20px",padding:"16px",marginBottom:"16px",boxShadow:"0 2px 16px rgba(196,132,138,0.07)"}}>
             {visionImagePreview?(
               <div style={{position:"relative",marginBottom:"12px"}}>
-                <img src={visionImagePreview} style={{width:"100%",borderRadius:"12px",maxHeight:"240px",objectFit:"cover"}}/>
+                <img src={visionImagePreview} style={{width:"100%",borderRadius:"12px",maxHeight:"200px",objectFit:"cover"}}/>
                 <button onClick={()=>{setVisionImage(null);setVisionImagePreview(null);}}
                   style={{position:"absolute",top:"8px",right:"8px",background:"rgba(253,248,248,0.9)",border:"none",color:T.text,width:"28px",height:"28px",borderRadius:"50%",fontSize:"16px"}}>×</button>
               </div>
             ):(
-              <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px",background:T.bg,border:`2px dashed ${T.border}`,borderRadius:"12px",cursor:"pointer",marginBottom:"12px"}}>
-                <p style={{fontSize:"24px",color:T.dim,marginBottom:"8px"}}>○</p>
-                <p style={{fontSize:"11px",letterSpacing:"2px",color:T.muted,fontFamily:SANS}}>ADD TO HER VISION</p>
+              <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",background:T.bg,border:`2px dashed ${T.border}`,borderRadius:"12px",cursor:"pointer",marginBottom:"12px"}}>
+                <p style={{fontSize:"24px",color:T.dim,marginBottom:"6px"}}>○</p>
+                <p style={{fontSize:"11px",letterSpacing:"2px",color:T.muted,fontFamily:SANS}}>ADD TO MY VISION</p>
                 <input type="file" accept="image/*" onChange={handleVisionImageSelect} style={{display:"none"}}/>
               </label>
             )}
-            <input value={visionCaption} onChange={e=>setVisionCaption(e.target.value)} placeholder="She envisions..."
+            <input value={visionCaption} onChange={e=>setVisionCaption(e.target.value)} placeholder="I envision... (optional)"
               style={{width:"100%",padding:"11px 14px",background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:"14px",borderRadius:"10px",outline:"none",fontStyle:"italic",marginBottom:"10px"}}/>
             <button onClick={submitVisionPost} disabled={!visionImage||uploadingVision}
               style={{width:"100%",padding:"13px",background:visionImage?T.rose:T.dim,border:"none",color:"#fff",fontSize:"11px",letterSpacing:"4px",fontWeight:"600",borderRadius:"12px",opacity:!visionImage?0.5:1,fontFamily:SANS}}>
-              {uploadingVision?"ADDING TO HER VISION...":"ADD TO HER VISION"}
+              {uploadingVision?"ADDING...":"PIN TO MY BOARD ✦"}
             </button>
           </div>
+
+          {/* Pinterest masonry grid */}
           {visionPosts.length===0?(
             <div style={{textAlign:"center",padding:"40px 0",color:T.dim}}>
               <p style={{fontSize:"32px",marginBottom:"12px",color:T.rose,opacity:0.4}}>○</p>
-              <p style={{fontSize:"15px",fontStyle:"italic",lineHeight:1.8,color:T.muted}}>Her vision is waiting to be built.</p>
+              <p style={{fontSize:"15px",fontStyle:"italic",lineHeight:1.8,color:T.muted}}>My vision board is empty.<br/>Start pinning what I'm building toward.</p>
             </div>
           ):(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
-              {visionPosts.map(post=>(
-                <div key={post.id} style={{position:"relative",borderRadius:"12px",overflow:"hidden"}}>
-                  <img src={post.image_url} style={{width:"100%",height:"160px",objectFit:"cover",display:"block"}}/>
-                  {post.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent, rgba(45,31,34,0.85))",padding:"20px 10px 8px"}}>
-                    <p style={{fontSize:"12px",color:"#fff",fontStyle:"italic"}}>{post.caption}</p>
-                  </div>}
+            <div style={{columns:"2",columnGap:"10px"}}>
+              {visionPosts.map((post, i) => (
+                <div key={post.id} style={{breakInside:"avoid",marginBottom:"10px",position:"relative",borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(196,132,138,0.1)"}}>
+                  <img src={post.image_url}
+                    style={{width:"100%",height: i%5===0 ? "220px" : i%3===0 ? "180px" : "140px", objectFit:"cover",display:"block"}}/>
+                  {post.caption&&(
+                    <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent, rgba(45,31,34,0.8))",padding:"20px 10px 8px"}}>
+                      <p style={{fontSize:"11px",color:"#fff",fontStyle:"italic",lineHeight:1.4}}>{post.caption}</p>
+                    </div>
+                  )}
                   <button onClick={()=>deleteVisionPost(post.id)}
-                    style={{position:"absolute",top:"6px",right:"6px",background:"rgba(253,248,248,0.85)",border:"none",color:T.text,width:"24px",height:"24px",borderRadius:"50%",fontSize:"12px",cursor:"pointer"}}>×</button>
+                    style={{position:"absolute",top:"6px",right:"6px",background:"rgba(253,248,248,0.85)",border:"none",color:T.text,width:"22px",height:"22px",borderRadius:"50%",fontSize:"12px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                 </div>
               ))}
             </div>
@@ -1012,12 +1158,20 @@ export default function App() {
         </div>}
       </div>
 
+      {/* Bottom Nav — HOME · RESET · CIRCLE · GOALS · CYCLE · VISION */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:T.card,borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:50,boxShadow:"0 -4px 20px rgba(196,132,138,0.08)"}}>
-        {[{v:"today",icon:"◈",label:"HOME"},{v:"goals",icon:"✶",label:"GOALS"},{v:"wall",icon:"◎",label:"CIRCLE"},{v:"cycle",icon:"☽",label:"CYCLE"},{v:"vision",icon:"◉",label:"VISION"}].map(({v,icon,label})=>(
+        {[
+          {v:"today", icon:"◈", label:"HOME"},
+          {v:"reset", icon:"✦", label:"RESET"},
+          {v:"wall",  icon:"◎", label:"CIRCLE"},
+          {v:"goals", icon:"✶", label:"GOALS"},
+          {v:"cycle", icon:"☽", label:"CYCLE"},
+          {v:"vision",icon:"◉", label:"VISION"},
+        ].map(({v,icon,label})=>(
           <button key={v} onClick={()=>{setView(v);if(v==="wall")loadWall();if(v==="vision")loadVisionBoard();}}
-            style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",opacity:view===v?1:0.35,cursor:"pointer"}}>
-            <span style={{fontSize:"20px",color:view===v?T.rose:T.muted}}>{icon}</span>
-            <span style={{fontSize:"8px",letterSpacing:"2px",color:view===v?T.rose:T.muted,fontFamily:SANS,fontWeight:view===v?"700":"400"}}>{label}</span>
+            style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",opacity:view===v?1:0.35,cursor:"pointer"}}>
+            <span style={{fontSize:"18px",color:view===v?T.rose:T.muted}}>{icon}</span>
+            <span style={{fontSize:"7px",letterSpacing:"1px",color:view===v?T.rose:T.muted,fontFamily:SANS,fontWeight:view===v?"700":"400"}}>{label}</span>
           </button>
         ))}
       </div>
