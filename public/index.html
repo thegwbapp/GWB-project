@@ -2,28 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta name="theme-color" content="#1a1612" />
-    <meta name="description" content="The GWB Project — Daily Check-In" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#c4848a" />
+    <meta name="description" content="Be Her Daily — The Grown Woman Blueprint. Daily accountability and community for women serious about becoming." />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Be Her Daily" />
     <title>Be Her Daily</title>
-    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       html { -webkit-text-size-adjust: 100%; }
-      body { background: #1a1612; color: #f0e8d8; font-family: 'Cormorant Garamond', Georgia, serif; overflow-x: hidden; }
-      input, button, textarea { font-family: inherit; }
-      ::-webkit-scrollbar { width: 3px; }
-      ::-webkit-scrollbar-track { background: #1a1612; }
-      ::-webkit-scrollbar-thumb { background: #3d3528; border-radius: 2px; }
+      body { background: #fdf8f8; overscroll-behavior: none; }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/service-worker.js")
+            .then(reg => console.log("SW registered:", reg.scope))
+            .catch(err => console.log("SW failed:", err));
+        });
+      }
+    </script>
   </body>
 </html>
