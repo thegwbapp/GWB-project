@@ -649,7 +649,7 @@ export default function App() {
             <p style={{fontSize:"9px",letterSpacing:"4px",color:T.dim,marginBottom:"14px",fontFamily:SANS}}>HOW ARE YOU FEELING?</p>
             <div style={{display:"flex",justifyContent:"space-between",gap:"6px"}}>
               {MOODS.map(m => (
-                <button key={m.label} onClick={()=>setMood(mood===m.label?null:m.label)}
+                <button key={m.label} onClick={async()=>{ const newMood=mood===m.label?null:m.label; setMood(newMood); await dbUpdate("users",user.id,{mood:newMood,mood_date:today()}); }}
                   style={{flex:1,padding:"10px 4px",background:mood===m.label?T.roseLight:T.bg,border:`1.5px solid ${mood===m.label?T.rose:T.border}`,borderRadius:"12px",display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",cursor:"pointer",transition:"all 0.2s"}}>
                   <span style={{fontSize:"20px"}}>{m.emoji}</span>
                   <span style={{fontSize:"8px",color:mood===m.label?T.rose:T.muted,fontFamily:SANS,letterSpacing:"0.5px",fontWeight:mood===m.label?"700":"400"}}>{m.label}</span>
