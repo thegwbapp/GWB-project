@@ -206,6 +206,7 @@ export default function App() {
     setCheckins(clist);
     calcStreak(clist);
     if (u.cycle_start) { setCycleStartDate(u.cycle_start); setCycleSaved(true); }
+    if (u.mood && u.mood_date === today()) { setMood(u.mood); }
     setDataLoading(false);
     loadWall();
     loadVisionBoard(u);
