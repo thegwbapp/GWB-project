@@ -180,18 +180,6 @@ export default function App() {
   const toggleReset = (id) => setResetChecked(p => ({...p, [id]: !p[id]}));
 
   useEffect(() => {
-    // OneSignal
-    const script = document.createElement("script");
-    script.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
-    script.defer = true;
-    document.head.appendChild(script);
-    script.onload = () => {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({ appId: "605542f2-e96a-4614-bf47-65d182f45c72", allowLocalhostAsSecureOrigin: true });
-      });
-    };
-
     const t = setTimeout(async () => {
       try {
         const saved = localStorage.getItem("gwb_user_id");
