@@ -415,7 +415,7 @@ export default function App() {
       const rec = todayCheckins.find(c => c.goal_id === goal.id);
       if (rec) { setCheckins(prev => prev.filter(c => c.id !== rec.id)); await dbDelete("checkins", rec.id); }
     } else {
-      const data = await dbInsert("checkins", {user_id:user.id, goal_id:goal.id, goal_text:goal.goal_text, date:today(), streak:streak+1, aesthetic, display_name:user.display_name});
+      const data = await dbInsert("checkins", {user_id:user.id, goal_id:goal.id, goal_text:goal.goal_text, date:today(), streak:streak+1, aesthetic, display_name:user.display_name, mood:mood||null});
       if (data && !data.code) setCheckins(prev => [...prev, data]);
       if (completedCount+1 === goals.length && goals.length > 0) { setCelebrating(true); setTimeout(() => setCelebrating(false), 4000); }
     }
