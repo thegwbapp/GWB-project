@@ -320,7 +320,7 @@ export default function App() {
     setChallengeLoading(true);
     try {
       const dayOfWeek = new Date().toLocaleDateString("en-US", {weekday:"long"});
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/.netlify/functions/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
           system:"You are the voice of Be Her Daily — The Grown Woman Blueprint. Create a single daily community challenge prompt for women focused on intentional living and growth. Make it thoughtful, specific, and inspiring. Return ONLY the question itself — under 20 words, no quotes.",
@@ -477,7 +477,7 @@ export default function App() {
     const angle = NUDGE_ANGLES[Math.floor(Math.random() * NUDGE_ANGLES.length)];
     const seed = Math.random().toString(36).substring(7);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/.netlify/functions/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1000,
